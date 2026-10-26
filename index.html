@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4e79">
+<title>Fahrer-Kontrolle</title>
+<!-- iPhone / Web-App -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fahrer-Kontrolle">
+<script src="jspdf.umd.min.js"></script>
+<script src="logo.js"></script>
+<script>
+/* ============================================================
+   KONFIGURATION – hier die festen Werte für den Betrieb eintragen
+   ============================================================ */
+const CONFIG = {
+  firma:      "AS Logistik",
+  empfaenger: "fuhrpark@aslogistik-lu.com",  // feste Empfängeradresse
+  cc:         "",                             // optional, mehrere mit Komma
+  adminPin:   "1234",                         // PIN für die Einstellungen
+  webhookUrl: ""  // optional: Endpunkt für automatischen Versand (z.B. Power Automate), siehe Anleitung
+};
+</script>
+<style>
+:root{
+  --bg:#f3f5f8; --card:#fff; --text:#1b2430; --muted:#5d6b7c; --line:#dde3ea;
+  --primary:#1f4e79; --primary-2:#2d6aa3; --ok:#1e8e4a; --bad:#c62828; --na:#7a8794;
+  --ok-bg:#e5f5ec; --bad-bg:#fdeaea; --na-bg:#eef1f4; --warn-bg:#fff6e0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11161c; --card:#1b232c; --text:#e8edf2; --muted:#9aa8b6; --line:#2c3743;
+    --primary:#5fa2e0; --primary-2:#7db6ea; --ok:#4cc27e; --bad:#ef6b6b; --na:#9aa8b6;
+    --ok-bg:#163424; --bad-bg:#3a1c1c; --na-bg:#232d38; --warn-bg:#3a3018;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+header{position:sticky;top:0;z-index:5;background:var(--primary);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;padding-top:max(12px,env(safe-area-inset-top))}
+@media (prefers-color-scheme: dark){header{background:#16334f}}
+header h1{font-size:18px;margin:0;flex:1}
+header #logo{height:28px;width:auto;display:block;margin-right:auto}
+header button{background:transparent;border:0;color:#fff;font-size:22px;padding:4px 8px;cursor:pointer}
+main{max-width:680px;margin:0 auto;padding:16px 16px 120px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{font-size:17px;margin:0 0 12px}
+.big{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 16px;margin-bottom:12px;color:var(--text);cursor:pointer;font:inherit}
+.big b{display:block;font-size:18px;margin-bottom:2px;color:var(--primary)}
+.big span{color:var(--muted);font-size:14px}
+.big:active{transform:scale(.99)}
+label{display:block;font-size:14px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text)}
+textarea{min-height:80px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.row{grid-template-columns:1fr}}
+.item{border-top:1px solid var(--line);padding:10px 0}
+.item:first-of-type{border-top:0}
+.item .q{font-weight:500;margin-bottom:8px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg button{font:inherit;font-size:14px;padding:10px 4px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer}
+.seg button.on.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);font-weight:600}
+.seg button.on.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad);font-weight:600}
+.seg button.on.na{background:var(--na-bg);border-color:var(--na);color:var(--na);font-weight:600}
+.item.missing .q{color:var(--bad)}
+.seg.two{grid-template-columns:1fr 1fr}
+.seg.two button{padding:14px 6px;font-size:15px}
+#vsCard.missing h2{color:var(--bad)}
+.banner.alarm{background:var(--bad-bg);color:var(--bad);font-weight:600}
+.item .defect{margin-top:8px;display:none}
+.item.isbad .defect{display:block}
+.defect .btn.sec{margin-top:8px;text-align:center}
+.defect .photos{margin-top:8px}
+.item.missing .defect .btn.sec{border-color:var(--bad);color:var(--bad)}
+.btn{display:block;width:100%;font:inherit;font-weight:600;padding:14px;border-radius:12px;border:0;background:var(--primary);color:#fff;cursor:pointer;margin-top:10px}
+.btn.sec{background:transparent;color:var(--primary);border:1.5px solid var(--primary)}
+.btn.small{display:inline-block;width:auto;padding:8px 14px;margin:0;font-size:14px}
+.btn:disabled{opacity:.5}
+.hint{font-size:13px;color:var(--muted)}
+.banner{background:var(--warn-bg);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:10px}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.photos div{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--na-bg)}
+.photos img{width:100%;height:100%;object-fit:cover}
+.photos button{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:26px;height:26px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer}
+.photos input{position:absolute;bottom:0;left:0;right:0;border-radius:0;padding:4px 6px;font-size:12px;background:rgba(0,0,0,.55);color:#fff;border:0}
+canvas.sig{width:100%;height:160px;border:1px dashed var(--muted);border-radius:10px;background:#fff;touch-action:none}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:8px}
+.check input{width:22px;height:22px;flex:none;margin-top:1px}
+.check label{margin:0;color:var(--text);font-size:15px}
+.sticky{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px max(10px,env(safe-area-inset-bottom))}
+.sticky .btn{max-width:648px;margin:0 auto}
+.hidden{display:none!important}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:20px}
+.tag.ok{background:var(--ok-bg);color:var(--ok)} .tag.bad{background:var(--bad-bg);color:var(--bad)}
+.hist{border-top:1px solid var(--line);padding:10px 0;font-size:14px}
+.hist:first-child{border-top:0}
+pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;background:var(--bg);padding:10px;border-radius:10px;max-height:300px;overflow:auto}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20}
+</style>
+</head>
+<body>
+<header>
+  <button id="backBtn" class="hidden" aria-label="Zurück">‹</button>
+  <img id="logo" alt="AS Logistik">
+  <h1 id="title" class="hidden">Fahrer-Kontrolle</h1>
+  <button id="settingsBtn" aria-label="Einstellungen">⚙</button>
+</header>
+
+<main>
+  <!-- START -->
+  <section id="s-start">
+    <button class="big" data-mode="abfahrt"><b>Abfahrtskontrolle</b><span>Tägliche Kontrolle vor Fahrtantritt</span></button>
+    <button class="big" data-mode="uebergabe"><b>Übergabe – letzter Tag</b><span>Zustand vor Urlaub / Abwesenheit dokumentieren</span></button>
+    <button class="big" data-mode="uebernahme"><b>Übernahme – erster Tag</b><span>Zustand nach Urlaub / Fahrzeugübernahme dokumentieren</span></button>
+    <div class="card">
+      <h2>Letzte Kontrollen auf diesem Gerät</h2>
+      <div id="history"><p class="hint">Noch keine Kontrollen.</p></div>
+    </div>
+  </section>
+
+  <!-- FORMULAR -->
+  <section id="s-form" class="hidden">
+    <div id="prevInfo" class="banner hidden"></div>
+    <div class="card">
+      <h2>Fahrzeug &amp; Fahrer</h2>
+      <label for="f-fahrer">Fahrer (Name)*</label>
+      <input id="f-fahrer" autocomplete="name">
+      <div class="row">
+        <div><label for="f-kennz">Kennzeichen Fahrzeug*</label><input id="f-kennz" class="plate" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="z.B. AB1234"></div>
+        <div><label for="f-anh">Kennzeichen Anhänger</label><input id="f-anh" class="plate" autocapitalize="characters" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <div class="row">
+        <div><label for="f-km">Kilometerstand*</label><input id="f-km" inputmode="numeric"></div>
+        <div><label for="f-zeit">Datum / Uhrzeit</label><input id="f-zeit" type="datetime-local"></div>
+      </div>
+      <div id="handoverFields" class="hidden">
+        <div class="row">
+          <div><label for="f-von">Abwesend von</label><input id="f-von" type="date"></div>
+          <div><label for="f-bis">Abwesend bis</label><input id="f-bis" type="date"></div>
+        </div>
+        <label for="f-vertr" id="l-vertr">Vertretung / übergeben an</label>
+        <input id="f-vertr">
+        <div class="row">
+          <div><label for="f-tank">Tankfüllstand*</label>
+            <select id="f-tank"><option value="">– bitte wählen –</option><option>voll</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Reserve</option></select></div>
+          <div><label for="f-adblue">AdBlue-Füllstand*</label>
+            <select id="f-adblue"><option value="">– bitte wählen –</option><option>voll</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Reserve</option><option>nicht vorhanden</option></select></div>
+        </div>
+        <label for="f-schl">Anzahl Schlüssel</label>
+        <input id="f-schl" inputmode="numeric">
+      </div>
+    </div>
+
+    <div id="checklist"></div>
+
+    <div class="card">
+      <h2>Fotos</h2>
+      <p class="hint" id="photoHint"></p>
+      <label class="btn sec" style="text-align:center;margin:0">📷 Foto aufnehmen / hinzufügen
+        <input id="photoInput" type="file" accept="image/*" capture="environment" multiple class="hidden">
+      </label>
+      <div class="photos" id="photos"></div>
+    </div>
+
+    <div class="card">
+      <h2>Bemerkungen</h2>
+      <textarea id="f-bem" placeholder="Sonstige Hinweise …"></textarea>
+    </div>
+
+    <div class="card" id="vsCard">
+      <h2>Verkehrssicherheit*</h2>
+      <div class="seg two">
+        <button type="button" data-vs="ja">✓ Verkehrssicher</button>
+        <button type="button" data-vs="nein">✗ Nicht verkehrssicher</button>
+      </div>
+      <div id="vsNein" class="hidden" style="margin-top:12px">
+        <div class="banner alarm" id="vsWarn"></div>
+        <label for="f-vsgrund">Begründung / was wurde veranlasst?*</label>
+        <textarea id="f-vsgrund" placeholder="z.B. Bremsen ziehen einseitig, Werkstatt informiert …"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Unterschrift Fahrer*</h2>
+      <canvas class="sig" id="sig"></canvas>
+      <div style="margin-top:8px;text-align:right"><button class="btn sec small" id="sigClear" type="button">Löschen</button></div>
+      <div class="check"><input type="checkbox" id="f-bestaet"><label for="f-bestaet" id="l-bestaet"></label></div>
+    </div>
+  </section>
+
+  <!-- ERGEBNIS -->
+  <section id="s-done" class="hidden">
+    <div class="card">
+      <h2 id="doneTitle">Kontrolle erstellt</h2>
+      <p id="doneSummary"></p>
+      <p class="hint">Empfänger: <b id="doneTo"></b></p>
+      <div id="sendArea"></div>
+      <button class="btn sec" id="btnPdf">PDF herunterladen</button>
+    </div>
+    <div class="card">
+      <h2>Vorschau E-Mail-Text</h2>
+      <pre id="donePreview"></pre>
+    </div>
+    <button class="btn" id="btnHome">Zur Startseite</button>
+  </section>
+
+  <!-- EINSTELLUNGEN -->
+  <section id="s-settings" class="hidden">
+    <div class="card">
+      <h2>Einstellungen</h2>
+      <p class="hint">Gelten nur für dieses Gerät. Feste Werte für alle Geräte stehen im CONFIG-Block der Datei.</p>
+      <label for="c-firma">Firma</label><input id="c-firma">
+      <label for="c-to">Empfänger-E-Mail*</label><input id="c-to" type="email">
+      <label for="c-cc">CC (optional, mit Komma trennen)</label><input id="c-cc">
+      <label for="c-hook">Webhook für automatischen Versand (optional)</label><input id="c-hook" type="url" placeholder="https://…">
+      <button class="btn" id="saveSettings">Speichern</button>
+      <button class="btn sec" id="resetSettings">Auf Standard zurücksetzen</button>
+      <button class="btn sec" id="clearHistory">Verlauf auf diesem Gerät löschen</button>
+    </div>
+  </section>
+</main>
+
+<div class="sticky hidden" id="formBar"><button class="btn" id="btnSubmit">Kontrolle abschließen</button></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+const settings = () => Object.assign({}, CONFIG, store.get("settings", {}));
+
+/* ---------- Checklisten ---------- */
+const BASE = [
+  { titel: "Fahrzeug außen", punkte: [
+    "Beleuchtung, Blinker, Bremslichter",
+    "Reifen (Profil, Luftdruck, Beschädigungen)",
+    "Räder / Radmuttern",
+    "Spiegel",
+    "Scheiben & Scheibenwischer",
+    "Karosserie / Aufbau ohne neue Schäden",
+    "Kennzeichen sauber & lesbar"
+  ]},
+  { titel: "Technik", punkte: [
+    "Bremsanlage / Druckluft",
+    "Lenkung",
+    "Motoröl & Kühlmittel",
+    "Keine Warnleuchten im Display",
+    "Keine Undichtigkeiten (Öl, Diesel, Luft)",
+    "Hupe"
+  ]},
+  { titel: "Ausrüstung & Papiere", punkte: [
+    "Warndreieck & Warnleuchte",
+    "Warnwesten",
+    "Verbandkasten",
+    "Feuerlöscher (Prüfdatum)",
+    "Unterlegkeile",
+    "Fahrzeugpapiere",
+    "Fahrerkarte / Tachograph"
+  ]},
+  { titel: "Ladung & Anhänger", punkte: [
+    "Ladungssicherungsmittel (Gurte, Netze)",
+    "Türen / Plane / Bordwände",
+    "Kupplung / Anhänger richtig verbunden"
+  ]}
+];
+const HANDOVER = { titel: "Übergabezustand", punkte: [
+  "Innenraum sauber",
+  "Fahrzeug außen sauber",
+  "Persönliche Gegenstände entfernt",
+  "Schlüssel vollständig",
+  "Tankkarte vorhanden",
+  "Mautbox / OBU vorhanden",
+  "Fahrzeug ordnungsgemäß abgestellt & verschlossen"
+]};
+const MODES = {
+  abfahrt:    { name: "Abfahrtskontrolle", kurz: "Abfahrtskontrolle",
+                bestaet: "Ich habe die Abfahrtskontrolle durchgeführt und alle Angaben wahrheitsgemäß gemacht.",
+                vsWarn: "Fahrt NICHT antreten! Bitte sofort Disposition / Fuhrpark telefonisch informieren.",
+                fotoHint: "Weitere Fotos (optional). Fotos zu Mängeln direkt beim jeweiligen Prüfpunkt aufnehmen." },
+  uebergabe:  { name: "Übergabe – letzter Tag vor Abwesenheit", kurz: "Übergabe (letzter Tag)", vertr: "Vertretung / übergeben an",
+                bestaet: "Ich bestätige, dass der dokumentierte Zustand dem tatsächlichen Zustand bei der Übergabe entspricht.",
+                fotoHint: "Empfohlen: Fotos von allen 4 Seiten, Innenraum und Tacho / km-Stand." },
+  uebernahme: { name: "Übernahme – erster Tag nach Abwesenheit", kurz: "Übernahme (erster Tag)", vertr: "Fahrzeug übernommen von (Vertretung)",
+                bestaet: "Ich bestätige, dass der dokumentierte Zustand dem tatsächlichen Zustand bei der Übernahme entspricht.",
+                fotoHint: "Empfohlen: Fotos von allen 4 Seiten, Innenraum und Tacho / km-Stand. Neue Schäden unbedingt fotografieren." }
+};
+
+let mode = null, answers = {}, photos = [], lastReport = null, sigDirty = false, verkehrssicher = null;
+const VS_WARN_HANDOVER = "Fahrzeug darf so nicht bewegt werden! Bitte sofort Disposition / Fuhrpark telefonisch informieren.";
+
+document.querySelectorAll("[data-vs]").forEach(b => b.onclick = () => {
+  verkehrssicher = b.dataset.vs === "ja";
+  document.querySelectorAll("[data-vs]").forEach(x => x.className = x === b ? "on " + (verkehrssicher ? "ok" : "bad") : "");
+  $("#vsNein").classList.toggle("hidden", verkehrssicher);
+  $("#vsCard").classList.remove("missing");
+  if(!verkehrssicher) $("#f-vsgrund").focus();
+});
+
+/* ---------- Navigation ---------- */
+function show(id){
+  ["s-start","s-form","s-done","s-settings"].forEach(s => $("#"+s).classList.toggle("hidden", s !== id));
+  $("#formBar").classList.toggle("hidden", id !== "s-form");
+  $("#backBtn").classList.toggle("hidden", id === "s-start");
+  $("#title").textContent = id === "s-form" ? MODES[mode].kurz : id === "s-settings" ? "Einstellungen" : "Fahrer-Kontrolle";
+  // Startseite: Logo statt Titel
+  $("#logo").classList.toggle("hidden", id !== "s-start");
+  $("#title").classList.toggle("hidden", id === "s-start");
+  window.scrollTo(0,0);
+  if(id === "s-start") renderHistory();
+  if(id === "s-form") sizeSig();
+}
+$("#backBtn").onclick = () => {
+  if(!$("#s-form").classList.contains("hidden") && !confirm("Kontrolle verwerfen?")) return;
+  show("s-start");
+};
+$("#btnHome").onclick = () => show("s-start");
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => startForm(b.dataset.mode));
+
+/* ---------- Formular ---------- */
+function nowLocal(){ const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
+
+function startForm(m){
+  mode = m; answers = {}; photos = [];
+  const isHand = m !== "abfahrt";
+  const last = store.get("lastDriver", {});
+  $("#f-fahrer").value = last.fahrer || "";
+  $("#f-kennz").value = (last.kennz || "").replace(/[^A-Z0-9]/g, "");
+  $("#f-anh").value = (last.anh || "").replace(/[^A-Z0-9]/g, "");
+  ["f-km","f-von","f-bis","f-vertr","f-tank","f-adblue","f-schl","f-bem"].forEach(id => $("#"+id).value = "");
+  $("#f-zeit").value = nowLocal();
+  $("#f-bestaet").checked = false;
+  verkehrssicher = null; $("#f-vsgrund").value = "";
+  document.querySelectorAll("[data-vs]").forEach(x => x.className = "");
+  $("#vsNein").classList.add("hidden"); $("#vsCard").classList.remove("missing");
+  $("#vsWarn").textContent = MODES[m].vsWarn || VS_WARN_HANDOVER;
+  $("#handoverFields").classList.toggle("hidden", !isHand);
+  if(isHand) $("#l-vertr").textContent = MODES[m].vertr;
+  $("#l-bestaet").textContent = MODES[m].bestaet;
+  $("#photoHint").textContent = MODES[m].fotoHint;
+  renderChecklist(isHand ? [...BASE, HANDOVER] : BASE);
+  renderPhotos();
+  show("s-form");
+  clearSig();
+  updatePrevInfo();
+}
+
+function updatePrevInfo(){
+  const box = $("#prevInfo");
+  if(mode !== "uebernahme"){ box.classList.add("hidden"); return; }
+  const k = $("#f-kennz").value.trim().toUpperCase();
+  const prev = store.get("history", []).find(h => h.mode === "uebergabe" && h.kennz === k);
+  if(!prev){ box.classList.add("hidden"); return; }
+  box.innerHTML = `<b>Letzte Übergabe auf diesem Gerät (${esc(k)}):</b><br>${esc(prev.zeitText)} · ${esc(prev.fahrer)} · ${esc(prev.km)} km · Tank ${esc(prev.tank||"–")}<br>` +
+    (prev.vs === false ? "<b>Bei Übergabe als NICHT VERKEHRSSICHER gemeldet!</b><br>" : "") +
+    (prev.maengel.length ? "Mängel: " + prev.maengel.map(esc).join("; ") : "Keine Mängel gemeldet.");
+  box.classList.remove("hidden");
+}
+$("#f-kennz").addEventListener("change", updatePrevInfo);
+
+function renderChecklist(groups){
+  const wrap = $("#checklist"); wrap.innerHTML = "";
+  groups.forEach((g, gi) => {
+    const card = document.createElement("div"); card.className = "card";
+    card.innerHTML = `<h2>${esc(g.titel)}</h2>`;
+    g.punkte.forEach((p, pi) => {
+      const key = gi + "-" + pi;
+      answers[key] = { gruppe: g.titel, punkt: p, status: null, note: "" };
+      const it = document.createElement("div"); it.className = "item"; it.dataset.key = key;
+      it.innerHTML = `<div class="q">${esc(p)}</div>
+        <div class="seg">
+          <button type="button" data-s="ok">✓ OK</button>
+          <button type="button" data-s="bad">✗ Mangel</button>
+          <button type="button" data-s="na">n. z.</button>
+        </div>
+        <div class="defect">
+          <input class="note" placeholder="Mangel beschreiben …">
+          <label class="btn sec">📷 Foto zum Mangel (Pflicht)
+            <input type="file" accept="image/*" capture="environment" multiple class="hidden">
+          </label>
+          <div class="photos"></div>
+        </div>`;
+      it.querySelector(".defect input[type=file]").onchange = async e => {
+        await addPhotos(e.target.files, key); e.target.value = "";
+        it.classList.remove("missing");
+      };
+      it.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+        answers[key].status = b.dataset.s;
+        it.querySelectorAll(".seg button").forEach(x => x.className = x === b ? "on " + b.dataset.s : "");
+        it.classList.toggle("isbad", b.dataset.s === "bad");
+        it.classList.remove("missing");
+        if(b.dataset.s === "bad") it.querySelector(".note").focus();
+      });
+      it.querySelector(".note").oninput = e => answers[key].note = e.target.value;
+      card.appendChild(it);
+    });
+    const all = document.createElement("button");
+    all.type = "button"; all.className = "btn sec small"; all.style.marginTop = "8px";
+    all.textContent = "Alle offenen auf OK";
+    all.onclick = () => card.querySelectorAll(".item").forEach(it => { if(!answers[it.dataset.key].status) it.querySelector('[data-s="ok"]').click(); });
+    card.appendChild(all);
+    wrap.appendChild(card);
+  });
+}
+
+/* ---------- Fotos ---------- */
+$("#photoInput").onchange = async e => { await addPhotos(e.target.files, null); e.target.value = ""; };
+// key = Prüfpunkt, zu dem das Foto gehört (null = allgemeines Foto)
+async function addPhotos(files, key){
+  for(const f of files){ try{ photos.push({ data: await shrink(f), text: "", key }); }catch(err){} }
+  renderPhotos();
+}
+function shrink(file){
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1280, r = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width*r); c.height = Math.round(img.height*r);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", 0.72));
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+function renderPhotos(){
+  document.querySelectorAll("#photos, #checklist .defect .photos").forEach(w => w.innerHTML = "");
+  photos.forEach((p, i) => {
+    const w = p.key === null ? $("#photos") : document.querySelector(`#checklist .item[data-key="${p.key}"] .photos`);
+    if(!w) return;
+    const d = document.createElement("div");
+    d.innerHTML = `<img src="${p.data}" alt=""><button type="button" aria-label="Entfernen">×</button>` +
+      (p.key === null ? `<input placeholder="Beschreibung" value="${esc(p.text)}">` : "");
+    d.querySelector("button").onclick = () => { photos.splice(i,1); renderPhotos(); };
+    if(p.key === null) d.querySelector("input").oninput = e => p.text = e.target.value;
+    w.appendChild(d);
+  });
+}
+const photoCount = key => photos.filter(p => p.key === key).length;
+
+/* ---------- Kennzeichen: nur Großbuchstaben und Ziffern ---------- */
+document.querySelectorAll("input.plate").forEach(inp => inp.addEventListener("input", () => {
+  const pos = inp.selectionStart, before = inp.value.slice(0, pos);
+  const clean = s => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const v = clean(inp.value);
+  if(v !== inp.value){ inp.value = v; const p = clean(before).length; inp.setSelectionRange(p, p); }
+}));
+
+/* ---------- Unterschrift ---------- */
+const sig = $("#sig"), sctx = sig.getContext("2d");
+function sizeSig(){
+  const r = sig.getBoundingClientRect(); if(!r.width) return;
+  const dpr = window.devicePixelRatio || 1;
+  sig.width = r.width * dpr; sig.height = r.height * dpr;
+  sctx.setTransform(dpr,0,0,dpr,0,0); sctx.lineWidth = 2.2; sctx.lineCap = "round"; sctx.strokeStyle = "#111";
+  clearSig();
+}
+function clearSig(){ sctx.save(); sctx.setTransform(1,0,0,1,0,0); sctx.fillStyle = "#fff"; sctx.fillRect(0,0,sig.width,sig.height); sctx.restore(); sigDirty = false; }
+let drawing = false;
+const pos = e => { const r = sig.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+sig.addEventListener("pointerdown", e => { drawing = true; sig.setPointerCapture(e.pointerId); const [x,y] = pos(e); sctx.beginPath(); sctx.moveTo(x,y); });
+sig.addEventListener("pointermove", e => { if(!drawing) return; const [x,y] = pos(e); sctx.lineTo(x,y); sctx.stroke(); sigDirty = true; });
+sig.addEventListener("pointerup", () => drawing = false);
+sig.addEventListener("pointercancel", () => drawing = false);
+$("#sigClear").onclick = clearSig;
+window.addEventListener("resize", () => { if(!$("#s-form").classList.contains("hidden") && !sigDirty) sizeSig(); });
+
+/* ---------- Abschließen ---------- */
+$("#btnSubmit").onclick = () => {
+  const err = [];
+  const v = id => $("#"+id).value.trim();
+  if(!v("f-fahrer")) err.push("Fahrer");
+  if(!v("f-kennz")) err.push("Kennzeichen");
+  if(!v("f-km")) err.push("Kilometerstand");
+  if(mode !== "abfahrt"){ if(!v("f-tank")) err.push("Tankfüllstand"); if(!v("f-adblue")) err.push("AdBlue"); }
+  let firstMissing = null, open = 0, noNote = 0, noPhoto = 0;
+  document.querySelectorAll("#checklist .item").forEach(it => {
+    const key = it.dataset.key, a = answers[key];
+    const bad = a.status === "bad";
+    const missNote = bad && !a.note.trim(), missPhoto = bad && photoCount(key) === 0;
+    const miss = !a.status || missNote || missPhoto;
+    it.classList.toggle("missing", miss);
+    if(!a.status) open++;
+    if(missNote) noNote++;
+    if(missPhoto) noPhoto++;
+    if(miss && !firstMissing) firstMissing = it;
+  });
+  if(open) err.push(open + " Prüfpunkt(e) offen");
+  if(noNote) err.push(noNote + " Mangel ohne Beschreibung");
+  if(noPhoto) err.push(noPhoto + " Mangel ohne Foto");
+  const vsMiss = verkehrssicher === null || (verkehrssicher === false && !v("f-vsgrund"));
+  $("#vsCard").classList.toggle("missing", vsMiss);
+  if(verkehrssicher === null) err.push("Verkehrssicherheit");
+  else if(vsMiss) err.push("Begründung „nicht verkehrssicher“");
+  if(vsMiss && !firstMissing) firstMissing = $("#vsCard");
+  if(!sigDirty) err.push("Unterschrift");
+  if(!$("#f-bestaet").checked) err.push("Bestätigung");
+  if(err.length){
+    toast("Bitte ergänzen: " + err.join(", "));
+    (firstMissing || $("#f-fahrer")).scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  store.set("lastDriver", { fahrer: v("f-fahrer"), kennz: v("f-kennz").toUpperCase(), anh: v("f-anh").toUpperCase() });
+  lastReport = buildReport();
+  saveHistory(lastReport);
+  showDone(lastReport);
+};
+
+function fmtDate(s){ if(!s) return ""; const d = new Date(s); return isNaN(d) ? s : d.toLocaleDateString("de-DE"); }
+function fmtDateTime(s){ const d = new Date(s); return isNaN(d) ? s : d.toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }); }
+
+function buildReport(){
+  const v = id => $("#"+id).value.trim();
+  const items = Object.values(answers);
+  const maengel = items.filter(a => a.status === "bad");
+  const r = {
+    id: Date.now(), mode, modeName: MODES[mode].name,
+    fahrer: v("f-fahrer"), kennz: v("f-kennz").toUpperCase(), anh: v("f-anh").toUpperCase(),
+    km: v("f-km"), zeit: v("f-zeit"), zeitText: fmtDateTime(v("f-zeit") || new Date()),
+    von: v("f-von"), bis: v("f-bis"), vertr: v("f-vertr"), tank: v("f-tank"), adblue: v("f-adblue"), schl: v("f-schl"),
+    bem: v("f-bem"), items, maengel: maengel.map(a => a.punkt + ": " + a.note.trim()),
+    // Mangelfotos zuerst, mit Prüfpunkt beschriftet; Fotos von zurückgenommenen Mängeln entfallen
+    photos: [
+      ...photos.filter(p => p.key !== null && answers[p.key].status === "bad").map(p => ({ data: p.data, text: "Mangel – " + answers[p.key].punkt })),
+      ...photos.filter(p => p.key === null)
+    ],
+    sig: sig.toDataURL("image/png")
+  };
+  const s = settings();
+  r.vs = verkehrssicher; r.vsGrund = v("f-vsgrund");
+  r.subject = (r.vs ? "" : "NICHT VERKEHRSSICHER – ") +
+    `${r.modeName} – ${r.kennz} – ${r.fahrer} – ${r.zeitText}` + (maengel.length ? ` – ${maengel.length} MANGEL` + (maengel.length > 1 ? "/MÄNGEL" : "") : (r.vs ? " – OK" : ""));
+  const L = [];
+  L.push(`${s.firma} – ${r.modeName}`, "");
+  if(r.vs) L.push("Fahrzeug laut Fahrer VERKEHRSSICHER.", "");
+  else L.push("!!! FAHRZEUG NICHT VERKEHRSSICHER !!!", "Begründung: " + r.vsGrund, "");
+  L.push(`Fahrer: ${r.fahrer}`, `Fahrzeug: ${r.kennz}` + (r.anh ? ` / Anhänger: ${r.anh}` : ""), `km-Stand: ${r.km}`, `Zeitpunkt: ${r.zeitText}`);
+  if(mode !== "abfahrt"){
+    if(r.von || r.bis) L.push(`Abwesenheit: ${fmtDate(r.von) || "?"} – ${fmtDate(r.bis) || "?"}`);
+    if(r.vertr) L.push(`${MODES[mode].vertr}: ${r.vertr}`);
+    L.push(`Tank: ${r.tank} · AdBlue: ${r.adblue}` + (r.schl ? ` · Schlüssel: ${r.schl}` : ""));
+  }
+  L.push("");
+  if(maengel.length){
+    L.push(`MÄNGEL (${maengel.length}):`);
+    maengel.forEach(a => L.push(`- [${a.gruppe}] ${a.punkt}: ${a.note.trim()}`));
+  } else L.push("Keine Mängel festgestellt.");
+  const na = items.filter(a => a.status === "na");
+  L.push(`Geprüft: ${items.length} Punkte – ${items.filter(a => a.status === "ok").length} OK, ${maengel.length} Mangel, ${na.length} nicht zutreffend.`);
+  if(r.bem) L.push("", "Bemerkungen:", r.bem);
+  L.push("", `Fotos: ${r.photos.length}` + (r.photos.length ? " (siehe PDF)" : ""), "Vom Fahrer unterschrieben und bestätigt.");
+  r.text = L.join("\n");
+  return r;
+}
+
+function saveHistory(r){
+  const h = store.get("history", []);
+  h.unshift({ id: r.id, mode: r.mode, modeName: r.modeName, fahrer: r.fahrer, kennz: r.kennz, km: r.km, tank: r.tank, zeitText: r.zeitText, maengel: r.maengel, vs: r.vs });
+  store.set("history", h.slice(0, 30));
+}
+function renderHistory(){
+  const h = store.get("history", []), w = $("#history");
+  if(!h.length){ w.innerHTML = '<p class="hint">Noch keine Kontrollen.</p>'; return; }
+  w.innerHTML = h.slice(0, 10).map(x => `<div class="hist">
+    ${x.vs === false ? '<span class="tag bad">NICHT VERKEHRSSICHER</span>' : ""}
+    ${x.maengel.length ? `<span class="tag bad">${x.maengel.length} Mangel</span>` : x.vs === false ? "" : '<span class="tag ok">OK</span>'}
+    <b>${esc(MODES[x.mode] ? MODES[x.mode].kurz : x.modeName)}</b> · ${esc(x.kennz)}<br>
+    <span class="hint">${esc(x.zeitText)} · ${esc(x.fahrer)} · ${esc(x.km)} km</span></div>`).join("");
+}
+
+/* ---------- PDF ---------- */
+function buildPdf(r){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210, M = 15; let y = 18;
+  const need = h => { if(y + h > 282){ doc.addPage(); y = 18; } };
+  const s = settings();
+  doc.addImage(LOGO, "PNG", W - M - 55, 9, 55, 55 * 111 / 800);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text(r.modeName, M, y); y += 7;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(90); doc.text(s.firma, M, y); doc.setTextColor(0); y += 8;
+  const info = [["Fahrer", r.fahrer], ["Fahrzeug", r.kennz + (r.anh ? " / Anhänger " + r.anh : "")], ["km-Stand", r.km], ["Zeitpunkt", r.zeitText]];
+  if(r.mode !== "abfahrt"){
+    if(r.von || r.bis) info.push(["Abwesenheit", (fmtDate(r.von) || "?") + " – " + (fmtDate(r.bis) || "?")]);
+    if(r.vertr) info.push([r.mode === "uebergabe" ? "Übergeben an" : "Übernommen von", r.vertr]);
+    info.push(["Tank / AdBlue", r.tank + " / " + r.adblue]);
+    if(r.schl) info.push(["Schlüssel", r.schl]);
+  }
+  doc.setFontSize(11);
+  info.forEach(([k, v]) => { doc.setFont("helvetica","bold"); doc.text(k + ":", M, y); doc.setFont("helvetica","normal"); doc.text(String(v), M + 38, y); y += 6; });
+  y += 3;
+  // Verkehrssicherheit hervorgehoben
+  if(r.vs){
+    doc.setFillColor(229,245,236); doc.rect(M, y - 5, W - 2*M, 9, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(30,142,74);
+    doc.text("Fahrzeug verkehrssicher", M + 3, y + 1); y += 11;
+  } else {
+    const g = doc.splitTextToSize("Begründung: " + r.vsGrund, W - 2*M - 6);
+    doc.setFillColor(253,234,234); doc.rect(M, y - 5, W - 2*M, 10 + g.length * 5, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(198,40,40);
+    doc.text("FAHRZEUG NICHT VERKEHRSSICHER", M + 3, y + 1);
+    doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.text(g, M + 3, y + 7);
+    y += 12 + g.length * 5;
+  }
+  doc.setTextColor(0); doc.setFontSize(11);
+  doc.setFont("helvetica","bold");
+  if(r.maengel.length){ doc.setTextColor(198,40,40); doc.text(`${r.maengel.length} Mangel/Mängel festgestellt`, M, y); }
+  else { doc.setTextColor(30,142,74); doc.text("Keine Mängel festgestellt", M, y); }
+  doc.setTextColor(0); y += 8;
+  let grp = null;
+  r.items.forEach(a => {
+    if(a.gruppe !== grp){ need(12); grp = a.gruppe; y += 2; doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.text(grp, M, y); y += 1.5; doc.setDrawColor(200); doc.line(M, y, W - M, y); y += 5; }
+    doc.setFont("helvetica","normal"); doc.setFontSize(10);
+    const st = a.status === "ok" ? "OK" : a.status === "bad" ? "MANGEL" : "n. z.";
+    const lines = doc.splitTextToSize(a.punkt, 135);
+    need(lines.length * 5 + 2);
+    doc.text(lines, M, y);
+    if(a.status === "bad") doc.setTextColor(198,40,40); else if(a.status === "ok") doc.setTextColor(30,142,74); else doc.setTextColor(120);
+    doc.setFont("helvetica","bold"); doc.text(st, W - M, y, { align: "right" }); doc.setTextColor(0); doc.setFont("helvetica","normal");
+    y += lines.length * 5;
+    if(a.status === "bad" && a.note){ const n = doc.splitTextToSize("> " + a.note, 170); need(n.length * 5); doc.setTextColor(198,40,40); doc.text(n, M + 4, y); doc.setTextColor(0); y += n.length * 5; }
+    y += 1;
+  });
+  if(r.bem){ y += 4; need(14); doc.setFont("helvetica","bold"); doc.text("Bemerkungen", M, y); y += 5; doc.setFont("helvetica","normal"); const b = doc.splitTextToSize(r.bem, 180); need(b.length*5); doc.text(b, M, y); y += b.length * 5; }
+  y += 6; need(40);
+  doc.setFont("helvetica","bold"); doc.text("Unterschrift Fahrer", M, y); y += 2;
+  doc.addImage(r.sig, "PNG", M, y, 70, 25); y += 27;
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(90);
+  const bt = doc.splitTextToSize(MODES[r.mode].bestaet, 180); doc.text(bt, M, y); y += bt.length * 4; doc.setTextColor(0);
+  if(r.photos.length){
+    doc.addPage(); y = 18; doc.setFontSize(13); doc.setFont("helvetica","bold"); doc.text("Fotos", M, y); y += 6;
+    doc.setFont("helvetica","normal"); doc.setFontSize(9);
+    const cw = 88, gap = 4; let col = 0;
+    r.photos.forEach((p, i) => {
+      const props = doc.getImageProperties(p.data);
+      const h = Math.min(cw * props.height / props.width, 110);
+      const w = h * props.width / props.height;
+      if(y + h + 8 > 285){ doc.addPage(); y = 18; col = 0; }
+      const x = M + col * (cw + gap);
+      doc.addImage(p.data, "JPEG", x, y, w, h);
+      doc.text(`Foto ${i+1}` + (p.text ? ": " + p.text : ""), x, y + h + 4, { maxWidth: cw });
+      if(col === 1){ y += 120; col = 0; } else col = 1;
+    });
+  }
+  const pages = doc.getNumberOfPages();
+  for(let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(`${r.kennz} · ${r.zeitText} · Seite ${i}/${pages}`, W/2, 292, { align: "center" }); }
+  return doc;
+}
+function pdfName(r){ return `${r.mode}_${r.kennz.replace(/[^A-Z0-9]/gi,"")}_${(r.zeit||"").replace(/[:T]/g,"-")}.pdf`; }
+
+/* ---------- Versand ---------- */
+function showDone(r){
+  const s = settings();
+  $("#doneSummary").innerHTML = `${esc(r.modeName)} für <b>${esc(r.kennz)}</b> – ` +
+    (r.vs ? "" : `<span class="tag bad">NICHT VERKEHRSSICHER</span> `) +
+    (r.maengel.length ? `<span class="tag bad">${r.maengel.length} Mangel</span>` : r.vs ? `<span class="tag ok">keine Mängel</span>` : "");
+  $("#doneTo").textContent = s.empfaenger + (s.cc ? " (CC: " + s.cc + ")" : "");
+  $("#donePreview").textContent = "Betreff: " + r.subject + "\n\n" + r.text;
+  const a = $("#sendArea"); a.innerHTML = "";
+  if(s.webhookUrl){
+    addBtn(a, "✉ Automatisch senden", "", () => sendWebhook(r));
+  }
+  addBtn(a, "✉ E-Mail mit PDF senden", s.webhookUrl ? "sec" : "", () => sharePdf(r));
+  addBtn(a, "✉ E-Mail ohne Anhang (nur Text)", "sec", () => sendMailto(r));
+  a.insertAdjacentHTML("beforeend", window.Android
+    ? `<p class="hint">„Mit PDF“ öffnet die Mail-App mit Empfänger, Betreff, Text und PDF – nur noch auf Senden tippen.</p>`
+    : `<p class="hint">„Mit PDF“ öffnet das Teilen-Menü des Handys – dort die Mail-App wählen. Der Empfänger wird automatisch in die Zwischenablage kopiert, falls er nicht vorausgefüllt ist.</p>`);
+  show("s-done");
+}
+function addBtn(parent, text, cls, fn){ const b = document.createElement("button"); b.className = "btn " + cls; b.textContent = text; b.onclick = fn; parent.appendChild(b); }
+
+function mailtoUrl(r, body){
+  const s = settings();
+  return `mailto:${encodeURIComponent(s.empfaenger).replace(/%40/g,"@").replace(/%2C/g,",")}?` +
+    (s.cc ? `cc=${encodeURIComponent(s.cc)}&` : "") +
+    `subject=${encodeURIComponent(r.subject)}&body=${encodeURIComponent(body)}`;
+}
+function sendMailto(r){ location.href = mailtoUrl(r, r.text); }
+
+async function sharePdf(r){
+  const s = settings();
+  let blob;
+  if(window.Android){
+    // Android-App: Mail-App direkt mit Empfänger und PDF-Anhang öffnen
+    try{
+      const b64 = buildPdf(r).output("datauristring").split(",")[1];
+      Android.sendMailWithPdf(b64, pdfName(r), s.empfaenger, s.cc || "", r.subject, r.text);
+      markSent();
+    }catch(e){ toast("PDF konnte nicht erstellt werden"); }
+    return;
+  }
+  try{ blob = buildPdf(r).output("blob"); }catch(e){ toast("PDF konnte nicht erstellt werden"); return; }
+  const file = new File([blob], pdfName(r), { type: "application/pdf" });
+  // nicht abwarten: iPhone erlaubt das Teilen nur direkt nach dem Antippen
+  try{ navigator.clipboard.writeText(s.empfaenger).catch(() => {}); }catch(e){}
+  if(navigator.canShare && navigator.canShare({ files: [file] })){
+    try{ await navigator.share({ files: [file], title: r.subject, text: r.text }); markSent(); return; }
+    catch(e){ if(e.name === "AbortError") return; }
+  }
+  // Fallback (z.B. PC): PDF speichern und Mailprogramm öffnen
+  downloadBlob(blob, file.name);
+  toast("PDF gespeichert – bitte in der E-Mail anhängen");
+  setTimeout(() => location.href = mailtoUrl(r, r.text + "\n\n(PDF bitte anhängen: " + file.name + ")"), 600);
+}
+
+async function sendWebhook(r){
+  const s = settings();
+  try{
+    toast("Wird gesendet …");
+    const pdf = buildPdf(r).output("datauristring").split(",")[1];
+    const res = await fetch(s.webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: s.empfaenger, cc: s.cc, subject: r.subject, text: r.text, filename: pdfName(r), pdfBase64: pdf }) });
+    if(!res.ok) throw new Error(res.status);
+    markSent(); toast("✓ Erfolgreich gesendet");
+  }catch(e){ toast("Senden fehlgeschlagen – bitte „E-Mail mit PDF“ nutzen"); }
+}
+function markSent(){ $("#doneTitle").textContent = "✓ Kontrolle versendet"; }
+
+$("#btnPdf").onclick = () => {
+  if(!lastReport) return;
+  if(window.Android){ Android.savePdf(buildPdf(lastReport).output("datauristring").split(",")[1], pdfName(lastReport)); return; }
+  downloadBlob(buildPdf(lastReport).output("blob"), pdfName(lastReport));
+};
+function downloadBlob(blob, name){ const u = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); }
+
+/* ---------- Einstellungen ---------- */
+$("#settingsBtn").onclick = () => {
+  if(!$("#s-form").classList.contains("hidden")) return toast("Erst Kontrolle abschließen oder verwerfen");
+  const pin = prompt("Admin-PIN:");
+  if(pin === null) return;
+  if(pin !== CONFIG.adminPin) return toast("Falsche PIN");
+  const s = settings();
+  $("#c-firma").value = s.firma; $("#c-to").value = s.empfaenger; $("#c-cc").value = s.cc; $("#c-hook").value = s.webhookUrl;
+  show("s-settings");
+};
+$("#saveSettings").onclick = () => {
+  const to = $("#c-to").value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return toast("Bitte gültige E-Mail-Adresse eingeben");
+  store.set("settings", { firma: $("#c-firma").value.trim() || CONFIG.firma, empfaenger: to, cc: $("#c-cc").value.trim(), webhookUrl: $("#c-hook").value.trim() });
+  toast("Gespeichert"); show("s-start");
+};
+$("#resetSettings").onclick = () => { store.del("settings"); toast("Zurückgesetzt"); show("s-start"); };
+$("#clearHistory").onclick = () => { if(confirm("Verlauf wirklich löschen?")){ store.del("history"); toast("Verlauf gelöscht"); } };
+
+/* ---------- Hilfen ---------- */
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+let tt;
+function toast(msg){ document.querySelectorAll(".toast").forEach(t => t.remove()); const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); clearTimeout(tt); tt = setTimeout(() => t.remove(), 3500); }
+
+$("#logo").src = LOGO;
+renderHistory();
+
+// Offline-Betrieb als Web-App (iPhone); in der Android-App nicht nötig
+if("serviceWorker" in navigator && !window.Android && /^https:|^http:\/\/localhost/.test(location.href)){
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
