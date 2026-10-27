@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1f4e79">
-<title>Fahrer-Kontrolle</title>
+<meta name="theme-color" content="#383e42">
+<title>Startklar</title>
 <!-- iPhone / Web-App -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Fahrer-Kontrolle">
+<meta name="apple-mobile-web-app-title" content="Startklar">
 <script src="jspdf.umd.min.js"></script>
 <script src="logo.js"></script>
 <script>
@@ -31,6 +31,7 @@ const CONFIG = {
   --bg:#f3f5f8; --card:#fff; --text:#1b2430; --muted:#5d6b7c; --line:#dde3ea;
   --primary:#1f4e79; --primary-2:#2d6aa3; --ok:#1e8e4a; --bad:#c62828; --na:#7a8794;
   --ok-bg:#e5f5ec; --bad-bg:#fdeaea; --na-bg:#eef1f4; --warn-bg:#fff6e0;
+  --header:#383e42;   /* Kopfleiste: Anthrazitgrau RAL 7016 */
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -42,8 +43,7 @@ const CONFIG = {
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
-header{position:sticky;top:0;z-index:5;background:var(--primary);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;padding-top:max(12px,env(safe-area-inset-top))}
-@media (prefers-color-scheme: dark){header{background:#16334f}}
+header{position:sticky;top:0;z-index:5;background:var(--header);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;padding-top:max(12px,env(safe-area-inset-top))}
 header h1{font-size:18px;margin:0;flex:1}
 header #logo{height:28px;width:auto;display:block;margin-right:auto}
 header button{background:transparent;border:0;color:#fff;font-size:22px;padding:4px 8px;cursor:pointer}
@@ -78,6 +78,7 @@ textarea{min-height:80px;resize:vertical}
 .defect .photos{margin-top:8px}
 .item.missing .defect .btn.sec{border-color:var(--bad);color:var(--bad)}
 .btn{display:block;width:100%;font:inherit;font-weight:600;padding:14px;border-radius:12px;border:0;background:var(--primary);color:#fff;cursor:pointer;margin-top:10px}
+.btn.alarm{background:var(--bad)}
 .btn.sec{background:transparent;color:var(--primary);border:1.5px solid var(--primary)}
 .btn.small{display:inline-block;width:auto;padding:8px 14px;margin:0;font-size:14px}
 .btn:disabled{opacity:.5}
@@ -100,6 +101,79 @@ canvas.sig{width:100%;height:160px;border:1px dashed var(--muted);border-radius:
 .hist{border-top:1px solid var(--line);padding:10px 0;font-size:14px}
 .hist:first-child{border-top:0}
 pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;background:var(--bg);padding:10px;border-radius:10px;max-height:300px;overflow:auto}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.slot{position:relative;display:flex;align-items:center;justify-content:center;flex-direction:column;aspect-ratio:1.58;margin:0;border:1.5px dashed var(--primary);border-radius:12px;background:var(--bg);color:var(--primary);font-size:14px;font-weight:600;cursor:pointer;overflow:hidden;text-align:center}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.slot.has{border-style:solid;border-color:var(--ok)}
+.slot.has span{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:3px}
+.slot.missing{border-color:var(--bad);color:var(--bad)}
+#fsAdrCard.missing h2,#fsKlasseCard.missing h2{color:var(--bad)}
+/* Notdienst: roter Knopf mit "Blaulicht" */
+.big.notdienst{background:var(--bad);border-color:var(--bad)}
+.big.notdienst b,.big.notdienst span{color:#fff!important}
+.blaulicht{display:inline-flex;align-items:center;justify-content:center;width:1.7em;height:1.7em;margin-right:4px;border-radius:50%;background:#fff;animation:blaulicht 1s steps(2,end) infinite}
+@keyframes blaulicht{0%{filter:none}50%{filter:hue-rotate(200deg) brightness(1.3)}}
+@media (prefers-reduced-motion: reduce){.blaulicht{animation:none}}
+#ndArtCard.missing h2,#ndBeschrCard.missing h2,#ndWfCard.missing h2,#ndMediaCard.missing h2{color:var(--bad)}
+.vid{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-top:8px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+/* Zeiterfassung */
+.tabs.three{grid-template-columns:1fr 1fr 1fr}
+.ze-uhr{text-align:center}
+.ze-zeit{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:1px;margin:4px 0}
+.ze-status{display:flex;justify-content:center;align-items:center;gap:8px;font-weight:600;margin-bottom:4px}
+.ze-status .dot{width:12px;height:12px;border-radius:50%;background:var(--na)}
+.ze-status .dot.on{background:var(--ok)} .ze-status .dot.pause{background:#e0a800}
+.btn.ok{background:var(--ok)}
+.ze-monat{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ze-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px;text-align:center}
+.ze-stats div b{display:block;font-size:18px} .ze-stats div span{font-size:12px;color:var(--muted)}
+.ze-stats .neg{color:var(--bad)} .ze-stats .pos{color:var(--ok)}
+.ze-tag{border-top:1px solid var(--line);padding:10px 0;font-size:14px}
+.ze-tag:first-child{border-top:0}
+.ze-tag .kopf{display:flex;justify-content:space-between;font-weight:600}
+.ze-eintrag{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
+.ze-warn{color:#b07d00;font-size:13px;margin-top:4px}
+.ze-tage{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.ze-tage label{margin:0;text-align:center;font-size:13px;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 0;cursor:pointer}
+.ze-tage input{display:block;width:auto;margin:4px auto 0}
+.tag.au{background:#e8e0f7;color:#5b3a9e} .tag.na{background:var(--na-bg);color:var(--na)}
+/* ToDo */
+.tabs.two{grid-template-columns:1fr 1fr}
+.todo{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--line);padding:12px 0 12px 10px;border-left:4px solid transparent}
+.todo:first-child{border-top:0}
+.todo.p1{border-left-color:var(--bad)} .todo.p2{border-left-color:#e07b00} .todo.p3{border-left-color:var(--primary)} .todo.p4{border-left-color:var(--na)}
+.todo input[type=checkbox]{width:24px;height:24px;flex:none;margin-top:1px}
+.todo .grow{flex:1;min-width:0}
+.todo .titel{font-weight:600;overflow-wrap:anywhere}
+.todo.done .titel{text-decoration:line-through;color:var(--muted)}
+.todo .meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px}
+.todo .meta .ueber{color:var(--bad);font-weight:600}
+.todo .desc{font-size:14px;margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere}
+.prio{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:12px;font-weight:700;color:#fff;margin-right:6px;vertical-align:1px}
+.prio.p1{background:var(--bad)} .prio.p2{background:#e07b00} .prio.p3{background:var(--primary)} .prio.p4{background:var(--na)}
+.tag.chef{background:#f3e5ff;color:#6a1b9a}
+.tk-zeile{display:grid;grid-template-columns:1fr 1.3fr auto;gap:6px;align-items:center;margin-bottom:6px}
+.tk-zeile input{padding:8px}
+@media (max-width:420px){.tk-zeile{grid-template-columns:1fr auto}.tk-zeile .tk-mail{grid-column:1}}
+/* Fristenwächter */
+.tabs{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:14px}
+.tabs button{font:inherit;font-size:14px;font-weight:600;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
+.tabs button.on{background:var(--header);border-color:var(--header);color:#fff}
+.fw-row{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--line);padding:10px 0;font-size:14px}
+.fw-row:first-child{border-top:0}
+.fw-row .dot{flex:none;width:12px;height:12px;border-radius:50%;margin-top:4px}
+.fw-row .grow{flex:1;min-width:0}
+.fw-row .dat{text-align:right;white-space:nowrap}
+.st0{background:var(--ok)} .st1{background:#e0a800} .st2{background:var(--bad)}
+.tag.warn{background:#fff3cd;color:#8a6100}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .tag.warn{background:#3a3018;color:#f0c75e} }
+.fw-item{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:12px 0;font:inherit;color:var(--text);cursor:pointer}
+.fw-item:first-child{border-top:0}
+.fw-frist{display:grid;grid-template-columns:1fr 150px;gap:8px;align-items:center;padding:6px 0}
+.fw-frist label{margin:0;color:var(--text);font-size:14px}
+.fw-frist input{padding:8px}
+.fw-frist.st1 input{border-color:#e0a800} .fw-frist.st2 input{border-color:var(--bad)}
+.fw-frist.st0, .fw-frist.st1, .fw-frist.st2{background:none}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20}
 </style>
 </head>
@@ -107,19 +181,334 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
 <header>
   <button id="backBtn" class="hidden" aria-label="Zurück">‹</button>
   <img id="logo" alt="AS Logistik">
-  <h1 id="title" class="hidden">Fahrer-Kontrolle</h1>
+  <h1 id="title" class="hidden">Startklar</h1>
   <button id="settingsBtn" aria-label="Einstellungen">⚙</button>
 </header>
 
 <main>
   <!-- START -->
   <section id="s-start">
+    <button id="fsDue" class="banner alarm hidden" type="button" style="display:block;width:100%;text-align:left;border:0;font:inherit;font-weight:600;cursor:pointer"></button>
+    <button class="big" id="goFzg"><b>🚚 Fahrzeugkontrolle</b><span>Abfahrtskontrolle, Mängelmelder, Übergabe / Übernahme</span></button>
+    <button class="big" id="goFs"><b>🪪 Führerscheinkontrolle</b><span id="fsStatus">Monatlich: Führerschein, Qualifikationsnachweis, Fahrerkarte, ADR</span></button>
+    <button class="big" id="goZe"><b>⏱ Zeiterfassung</b><span id="zeStatus">Stempeluhr, Arbeitszeiten, Urlaub &amp; Krankmeldung</span></button>
+    <button class="big" id="goTodo"><b>✅ ToDo</b><span id="todoStatus">Aufgaben erfassen, priorisieren und vergeben</span></button>
+    <button class="big" id="goFw"><b>🔒 Fristenwächter</b><span id="fwStatus">Ablaufdaten Fuhrpark – nur mit Passwort</span></button>
+    <div class="card">
+      <h2>Letzte Einträge auf diesem Gerät</h2>
+      <div id="history"><p class="hint">Noch keine Einträge.</p></div>
+    </div>
+  </section>
+
+  <!-- FAHRZEUGKONTROLLE -->
+  <section id="s-fzg" class="hidden">
     <button class="big" data-mode="abfahrt"><b>Abfahrtskontrolle</b><span>Tägliche Kontrolle vor Fahrtantritt</span></button>
+    <button class="big" data-mode="mangel"><b style="color:var(--bad)">⚠ Mängelmelder</b><span>Mangel während der Schicht melden</span></button>
     <button class="big" data-mode="uebergabe"><b>Übergabe – letzter Tag</b><span>Zustand vor Urlaub / Abwesenheit dokumentieren</span></button>
     <button class="big" data-mode="uebernahme"><b>Übernahme – erster Tag</b><span>Zustand nach Urlaub / Fahrzeugübernahme dokumentieren</span></button>
+    <button class="big notdienst" id="goNd"><b><span class="blaulicht">🚨</span> Notdienst</b><span>Panne, Unfall oder Schaden – sofort melden</span></button>
+  </section>
+
+  <!-- NOTDIENST -->
+  <section id="s-nd" class="hidden">
+    <div class="banner alarm">Bei Verletzten oder Gefahr: zuerst <a href="tel:112" style="color:inherit">📞 Notruf 112</a>!<br>
+      <span style="font-weight:400">Fahrzeug sichern: Warnblinker, Warnweste, Warndreieck.</span></div>
     <div class="card">
-      <h2>Letzte Kontrollen auf diesem Gerät</h2>
-      <div id="history"><p class="hint">Noch keine Kontrollen.</p></div>
+      <h2>1. Fahrzeug &amp; Fahrer</h2>
+      <label for="nd-fahrer">Fahrer (Name)*</label><input id="nd-fahrer" autocomplete="name">
+      <label for="nd-tel">Telefon für Rückruf</label><input id="nd-tel" type="tel" autocomplete="tel" placeholder="+352 …">
+      <div class="row">
+        <div><label for="nd-kennz">Kennzeichen Fahrzeug*</label><input id="nd-kennz" class="plate" autocapitalize="characters" autocomplete="off" spellcheck="false"></div>
+        <div><label for="nd-anh">Kennzeichen Anhänger</label><input id="nd-anh" class="plate" autocapitalize="characters" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <label for="nd-ort">Standort*</label><input id="nd-ort" placeholder="z.B. A3 Richtung Luxemburg, km 12 / Kunde XY">
+      <button type="button" class="btn sec" id="ndGeoBtn">📍 Standort ermitteln (GPS)</button>
+      <p class="hint" id="ndGeoInfo"></p>
+      <div class="row">
+        <div><label for="nd-km">Kilometerstand</label><input id="nd-km" inputmode="numeric"></div>
+        <div><label for="nd-zeit">Datum / Uhrzeit</label><input id="nd-zeit" type="datetime-local"></div>
+      </div>
+    </div>
+    <div class="card" id="ndArtCard">
+      <h2>2. Was ist los?*</h2>
+      <div class="seg two" id="ndArt"></div>
+      <input id="nd-artfrei" class="hidden" style="margin-top:8px" placeholder="Bitte kurz benennen*">
+    </div>
+    <div class="card" id="ndBeschrCard">
+      <h2>3. Was ist passiert?*</h2>
+      <textarea id="nd-beschr" placeholder="z.B. Spiegel rechts abgerissen, Luftleitung undicht, Reifen geplatzt …"></textarea>
+    </div>
+    <div class="card" id="ndWfCard">
+      <h2>4. Ist eine Weiterfahrt möglich?*</h2>
+      <div class="seg two">
+        <button type="button" data-wf="ja">✓ Weiterfahrt möglich</button>
+        <button type="button" data-wf="nein">✗ Reparatur nötig</button>
+      </div>
+      <div id="ndWfWarn" class="banner alarm hidden" style="margin:10px 0 0">Nicht weiterfahren! Fahrzeug sichern und auf Rückruf warten.</div>
+    </div>
+    <div class="card" id="ndMediaCard">
+      <h2>5. Fotos / Videos*</h2>
+      <p class="hint" style="margin-top:0">Mindestens ein Foto oder Video. Videos bitte kurz halten (max. 30 Sekunden).</p>
+      <div class="row">
+        <label class="btn sec" style="text-align:center">📷 Foto<input id="ndFoto" type="file" accept="image/*" capture="environment" multiple class="hidden"></label>
+        <label class="btn sec" style="text-align:center">🎥 Video<input id="ndVideo" type="file" accept="video/*" capture="environment" class="hidden"></label>
+      </div>
+      <div class="photos" id="ndPhotos"></div>
+      <div id="ndVideos"></div>
+      <p class="hint" id="ndSize"></p>
+    </div>
+  </section>
+
+  <!-- ZEITERFASSUNG -->
+  <section id="s-ze" class="hidden">
+    <div class="tabs three" id="zeTabs">
+      <button type="button" data-zetab="uhr">Stempeluhr</button>
+      <button type="button" data-zetab="zeiten">Zeiten</button>
+      <button type="button" data-zetab="abw">Urlaub/Krank</button>
+    </div>
+
+    <div data-zepane="uhr">
+      <div class="card" id="zeNameCard">
+        <label for="ze-name">Dein Name*</label>
+        <input id="ze-name" autocomplete="name">
+      </div>
+      <div class="card ze-uhr">
+        <div class="hint" id="zeDatum"></div>
+        <div class="ze-zeit" id="zeClock">--:--:--</div>
+        <div class="ze-status"><span class="dot" id="zeDot"></span><span id="zeStatusText"></span></div>
+        <div class="hint">Heute gearbeitet: <b id="zeHeute">0:00</b> h <span id="zePauseInfo"></span></div>
+        <div id="zeActions"></div>
+      </div>
+      <div class="card">
+        <h2>Schnellzugriff</h2>
+        <div class="row">
+          <button class="btn sec" type="button" data-zeabs="urlaub" style="margin:0">Urlaub beantragen</button>
+          <button class="btn sec" type="button" data-zeabs="krank" style="margin:0">Krank melden</button>
+        </div>
+      </div>
+    </div>
+
+    <div data-zepane="zeiten" class="hidden">
+      <div class="card">
+        <div class="ze-monat">
+          <button type="button" class="btn sec small" id="zeMonPrev" aria-label="Vorheriger Monat">‹</button>
+          <h2 id="zeMonLabel" style="margin:0"></h2>
+          <button type="button" class="btn sec small" id="zeMonNext" aria-label="Nächster Monat">›</button>
+        </div>
+        <div class="ze-stats" id="zeStats"></div>
+      </div>
+      <button class="btn" type="button" id="zeNachtragen">+ Zeit nachtragen</button>
+      <div class="card" style="margin-top:14px"><div id="zeTage"></div></div>
+      <button class="btn" type="button" id="zeBericht">✉ Monatsbericht per E-Mail (PDF)</button>
+      <button class="btn sec" type="button" id="zeCsv">Monat als CSV (Excel) speichern</button>
+    </div>
+
+    <div data-zepane="abw" class="hidden">
+      <div class="card">
+        <div class="ze-monat">
+          <button type="button" class="btn sec small" id="zeJahrPrev" aria-label="Vorheriges Jahr">‹</button>
+          <h2 id="zeJahrLabel" style="margin:0"></h2>
+          <button type="button" class="btn sec small" id="zeJahrNext" aria-label="Nächstes Jahr">›</button>
+        </div>
+        <div class="ze-stats" id="zeKonto"></div>
+      </div>
+      <div class="row">
+        <button class="btn" type="button" data-zeabs="urlaub" style="margin:0">Urlaub beantragen</button>
+        <button class="btn sec" type="button" data-zeabs="krank" style="margin:0">Krank melden</button>
+      </div>
+      <div class="card" style="margin-top:14px"><h2>Meine Einträge</h2><div id="zeAbwListe"></div></div>
+      <button class="btn sec" type="button" id="zeExport">Meine Daten speichern (.json)</button>
+    </div>
+  </section>
+
+  <!-- ZEITERFASSUNG: Zeit nachtragen / bearbeiten -->
+  <section id="s-ze-entry" class="hidden">
+    <div class="card">
+      <label for="zee-datum">Datum</label><input type="date" id="zee-datum">
+      <div class="row">
+        <div><label for="zee-start">Beginn</label><input type="time" id="zee-start"></div>
+        <div><label for="zee-ende">Ende</label><input type="time" id="zee-ende"></div>
+      </div>
+      <label for="zee-pause">Pause (Minuten)</label><input type="number" id="zee-pause" min="0" step="1" inputmode="numeric">
+      <label for="zee-notiz">Notiz (optional)</label><input id="zee-notiz" maxlength="300">
+      <p class="hint">Endet die Schicht nach Mitternacht, wird das Ende automatisch dem Folgetag zugeordnet. Jede Änderung wird protokolliert und im Monatsbericht vermerkt.</p>
+    </div>
+    <button class="btn sec" type="button" id="zeeLoeschen" style="color:var(--bad);border-color:var(--bad)">Eintrag löschen</button>
+  </section>
+
+  <!-- ZEITERFASSUNG: Urlaub / Krank -->
+  <section id="s-ze-abs" class="hidden">
+    <div class="card" id="zeaUrlaub">
+      <h2>Art</h2>
+      <div class="seg two">
+        <button type="button" data-zeart="urlaub">Erholungsurlaub</button>
+        <button type="button" data-zeart="sonderurlaub">Sonderurlaub</button>
+      </div>
+      <p class="hint">Erholungsurlaub wird vom Urlaubskonto abgezogen. Sonderurlaub z.B. bei Hochzeit, Umzug, Todesfall.</p>
+    </div>
+    <div class="card" id="zeaKrank">
+      <h2>Vermerk</h2>
+      <div class="seg two">
+        <button type="button" data-zeau="1">Krank mit AU</button>
+        <button type="button" data-zeau="0">Krank ohne AU</button>
+      </div>
+      <p class="hint">🔒 Bitte keine Diagnosen angeben.</p>
+    </div>
+    <div class="card">
+      <div class="row">
+        <div><label for="zea-von">Von</label><input type="date" id="zea-von"></div>
+        <div><label for="zea-bis" id="zea-bis-l">Bis</label><input type="date" id="zea-bis"></div>
+      </div>
+      <div class="check" id="zeaHalbWrap"><input type="checkbox" id="zea-halb"><label for="zea-halb">Halber Tag (nur bei einem einzelnen Tag)</label></div>
+      <p class="hint" id="zeaTage"></p>
+      <div id="zeaKommentarWrap"><label for="zea-kommentar">Kommentar (optional)</label><input id="zea-kommentar" maxlength="300"></div>
+    </div>
+  </section>
+
+  <!-- TODO -->
+  <section id="s-todo" class="hidden">
+    <button class="btn" type="button" id="todoNeu" style="margin:0 0 14px">+ Neues ToDo</button>
+    <div class="tabs two" id="todoTabs">
+      <button type="button" data-todotab="mine">Meine ToDos</button>
+      <button type="button" data-todotab="vergeben">Von mir vergeben</button>
+    </div>
+    <div class="card">
+      <div class="check" style="margin:0 0 6px"><input type="checkbox" id="todoErledigt"><label for="todoErledigt">Erledigte anzeigen</label></div>
+      <div id="todoListe"></div>
+    </div>
+  </section>
+
+  <!-- TODO: anlegen / bearbeiten -->
+  <section id="s-todo-edit" class="hidden">
+    <div class="card">
+      <label for="td-titel">Titel*</label><input id="td-titel" maxlength="200">
+      <div class="row">
+        <div><label for="td-prio">Priorität</label>
+          <select id="td-prio"><option value="1">1 – Höchste</option><option value="2">2 – Hoch</option><option value="3">3 – Normal</option><option value="4">4 – Niedrigste</option></select></div>
+        <div><label for="td-faellig">Fällig am</label><input id="td-faellig" type="date"></div>
+      </div>
+      <label for="td-an">Zuweisen an</label>
+      <select id="td-an"></select>
+      <p class="hint" id="td-an-hint"></p>
+      <label for="td-text">Beschreibung</label><textarea id="td-text" maxlength="4000"></textarea>
+    </div>
+    <button class="btn sec" type="button" id="tdLoeschen" style="color:var(--bad);border-color:var(--bad)">ToDo löschen</button>
+  </section>
+
+  <!-- FRISTENWÄCHTER: Anmeldung -->
+  <section id="s-fw-login" class="hidden">
+    <div class="card">
+      <h2>🔒 Fristenwächter</h2>
+      <p class="hint" style="margin-top:0">Dieser Bereich ist nur für die Fuhrparkverwaltung.</p>
+      <label for="fw-pw">Passwort</label>
+      <input id="fw-pw" type="password" autocomplete="current-password">
+      <button class="btn" id="fwLoginBtn" type="button">Anmelden</button>
+      <p class="hint" id="fwLoginMsg" style="color:var(--bad)"></p>
+    </div>
+  </section>
+
+  <!-- FRISTENWÄCHTER -->
+  <section id="s-fw" class="hidden">
+    <div class="tabs" id="fwTabs">
+      <button type="button" data-tab="uebersicht">Übersicht</button>
+      <button type="button" data-tab="fahrzeuge">Fahrzeuge</button>
+      <button type="button" data-tab="fahrer">Fahrer</button>
+      <button type="button" data-tab="einst">⚙</button>
+    </div>
+
+    <div data-pane="uebersicht">
+      <div class="card">
+        <div id="fwSumme" style="font-weight:600"></div>
+        <div class="check" style="margin-top:10px"><input type="checkbox" id="fwAlle"><label for="fwAlle">Alle Fristen anzeigen (nicht nur fällige)</label></div>
+        <div id="fwListe" style="margin-top:8px"></div>
+      </div>
+      <button class="btn" type="button" id="fwBericht">✉ Bericht per E-Mail</button>
+      <button class="btn sec" type="button" id="fwCsv">Alle Fristen als CSV (Excel) speichern</button>
+      <p class="hint">Rot = abgelaufen · Gelb = läuft innerhalb der Vorlaufzeit ab · Grün = gültig</p>
+    </div>
+
+    <div data-pane="fahrzeuge" class="hidden">
+      <button class="btn" type="button" id="fwNeuFz">+ Neues Fahrzeug</button>
+      <input id="fwSucheFz" placeholder="Suche Kennzeichen, Art, Modell …" style="margin:12px 0">
+      <div class="card" id="fwListeFz"></div>
+    </div>
+
+    <div data-pane="fahrer" class="hidden">
+      <button class="btn" type="button" id="fwNeuFa">+ Neuer Fahrer</button>
+      <input id="fwSucheFa" placeholder="Suche Name, Personalnummer …" style="margin:12px 0">
+      <div class="card" id="fwListeFa"></div>
+    </div>
+
+    <div data-pane="einst" class="hidden">
+      <div class="card">
+        <h2>Erinnerung</h2>
+        <label for="fwVorlauf">Erinnern ab … Monate vor Ablauf</label>
+        <select id="fwVorlauf"></select>
+        <label for="fwTag">Android-Benachrichtigung wöchentlich am (8:00 Uhr)</label>
+        <select id="fwTag"></select>
+        <button class="btn" type="button" id="fwEinstSpeichern">Speichern</button>
+      </div>
+      <div class="card">
+        <h2>Passwort ändern</h2>
+        <label for="fwPwAlt">Aktuelles Passwort</label><input id="fwPwAlt" type="password" autocomplete="current-password">
+        <label for="fwPwNeu">Neues Passwort (mind. 8 Zeichen)</label><input id="fwPwNeu" type="password" autocomplete="new-password">
+        <label for="fwPwNeu2">Neues Passwort wiederholen</label><input id="fwPwNeu2" type="password" autocomplete="new-password">
+        <button class="btn" type="button" id="fwPwBtn">Passwort ändern</button>
+      </div>
+      <div class="card">
+        <h2>Datensicherung</h2>
+        <p class="hint" style="margin-top:0">Die Fristen liegen nur auf diesem Handy. Bitte regelmäßig eine Sicherung speichern – z.B. an dich selbst mailen.</p>
+        <button class="btn sec" type="button" id="fwExport">Sicherung speichern (.json)</button>
+        <label class="btn sec" style="text-align:center">Sicherung laden / vom PC-Programm übernehmen
+          <input type="file" id="fwImport" accept=".json,.xml,application/json,text/xml,application/xml,*/*" class="hidden">
+        </label>
+        <p class="hint">Vom PC-Programm: die Datei <b>fristen_daten.xml</b> aus dem Ordner „Daten“ aufs Handy schicken und hier laden.</p>
+      </div>
+      <button class="btn sec" type="button" id="fwLogout">Abmelden</button>
+    </div>
+  </section>
+
+  <!-- FRISTENWÄCHTER: Bearbeiten -->
+  <section id="s-fw-edit" class="hidden">
+    <div class="card" id="fwEditStamm"></div>
+    <div class="card">
+      <h2>Ablaufdaten</h2>
+      <p class="hint" style="margin-top:0">Leer lassen = trifft nicht zu.</p>
+      <div id="fwEditFristen"></div>
+    </div>
+    <button class="btn sec" type="button" id="fwLoeschen" style="color:var(--bad);border-color:var(--bad)">Löschen</button>
+  </section>
+
+  <!-- FÜHRERSCHEINKONTROLLE -->
+  <section id="s-fs" class="hidden">
+    <div class="card">
+      <h2>Fahrer</h2>
+      <label for="fs-fahrer">Name*</label>
+      <input id="fs-fahrer" autocomplete="name">
+      <label for="fs-zeit">Datum / Uhrzeit</label>
+      <input id="fs-zeit" type="datetime-local">
+    </div>
+    <div class="card" id="fsKlasseCard">
+      <h2>Welche Führerscheinklasse hast du?*</h2>
+      <div class="seg two">
+        <button type="button" data-klasse="B">Klasse B</button>
+        <button type="button" data-klasse="CE">Klasse CE</button>
+      </div>
+    </div>
+    <div class="card" id="fsAdrCard">
+      <h2>Besitzt du eine ADR-Karte?*</h2>
+      <div class="seg two">
+        <button type="button" data-adr="ja">Ja</button>
+        <button type="button" data-adr="nein">Nein</button>
+      </div>
+    </div>
+    <div id="fsDocs"></div>
+    <div class="card">
+      <h2>Bemerkungen</h2>
+      <textarea id="fs-bem" placeholder="z.B. Fahrerkarte läuft im Dezember ab …"></textarea>
+    </div>
+    <div class="card">
+      <div class="check"><input type="checkbox" id="fs-bestaet"><label for="fs-bestaet">Ich bestätige, dass die fotografierten Dokumente meine eigenen, gültigen Originale sind.</label></div>
     </div>
   </section>
 
@@ -137,6 +526,10 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
       <div class="row">
         <div><label for="f-km">Kilometerstand*</label><input id="f-km" inputmode="numeric"></div>
         <div><label for="f-zeit">Datum / Uhrzeit</label><input id="f-zeit" type="datetime-local"></div>
+      </div>
+      <div id="mangelFields" class="hidden">
+        <label for="f-ort">Standort des Fahrzeugs</label>
+        <input id="f-ort" placeholder="z.B. A1 Raststätte Capellen / Kunde XY in Bettembourg">
       </div>
       <div id="handoverFields" class="hidden">
         <div class="row">
@@ -222,6 +615,30 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
       <button class="btn sec" id="resetSettings">Auf Standard zurücksetzen</button>
       <button class="btn sec" id="clearHistory">Verlauf auf diesem Gerät löschen</button>
     </div>
+    <div class="card">
+      <h2>Zeiterfassung – Vorgaben</h2>
+      <div class="row">
+        <div><label for="zc-std">Wochenstunden</label><input id="zc-std" type="number" min="1" max="60" step="0.5" inputmode="decimal"></div>
+        <div><label for="zc-urlaub">Urlaubstage pro Jahr</label><input id="zc-urlaub" type="number" min="0" max="60" step="0.5" inputmode="decimal"></div>
+      </div>
+      <label>Arbeitstage</label>
+      <div class="ze-tage" id="zc-tage"></div>
+      <div class="row">
+        <div><label for="zc-beginn">Erfassung ab (Soll zählt ab)</label><input id="zc-beginn" type="date"></div>
+        <div><label for="zc-land">Feiertage</label><select id="zc-land"><option value="LU">Luxemburg</option><option value="DE">Deutschland (bundesweit)</option></select></div>
+      </div>
+      <label for="zc-mail">Empfänger für Urlaub / Krank / Monatsbericht</label>
+      <input id="zc-mail" type="email" placeholder="leer = Empfänger von oben">
+      <button class="btn" id="zcSpeichern" type="button">Vorgaben speichern</button>
+    </div>
+    <div class="card">
+      <h2>ToDo – Kollegen</h2>
+      <p class="hint" style="margin-top:0">An diese Personen können ToDos per E-Mail vergeben werden.</p>
+      <div id="tk-liste"></div>
+      <button class="btn sec" id="tkNeu" type="button">+ Kollegen hinzufügen</button>
+      <div class="check" style="margin-top:12px"><input type="checkbox" id="tk-chef"><label for="tk-chef">Chef-Handy: vergebene ToDos als „Vom Chef“ markieren</label></div>
+      <button class="btn" id="tkSpeichern" type="button">Kollegen speichern</button>
+    </div>
   </section>
 </main>
 
@@ -289,8 +706,20 @@ const MODES = {
                 fotoHint: "Empfohlen: Fotos von allen 4 Seiten, Innenraum und Tacho / km-Stand." },
   uebernahme: { name: "Übernahme – erster Tag nach Abwesenheit", kurz: "Übernahme (erster Tag)", vertr: "Fahrzeug übernommen von (Vertretung)",
                 bestaet: "Ich bestätige, dass der dokumentierte Zustand dem tatsächlichen Zustand bei der Übernahme entspricht.",
-                fotoHint: "Empfohlen: Fotos von allen 4 Seiten, Innenraum und Tacho / km-Stand. Neue Schäden unbedingt fotografieren." }
+                fotoHint: "Empfohlen: Fotos von allen 4 Seiten, Innenraum und Tacho / km-Stand. Neue Schäden unbedingt fotografieren." },
+  mangel:     { name: "Mängelmeldung (während der Schicht)", kurz: "Mängelmelder",
+                bestaet: "Ich bestätige, dass die gemeldeten Mängel wahrheitsgemäß angegeben sind.",
+                vsWarn: "NICHT weiterfahren! Fahrzeug sicher abstellen und sofort Disposition / Fuhrpark telefonisch informieren.",
+                fotoHint: "Weitere Fotos (optional), z.B. Übersicht oder Umgebung." }
 };
+// Mängelarten für den Mängelmelder
+const MANGEL_ARTEN = [
+  "Reifen / Räder", "Bremsen", "Beleuchtung / Elektrik", "Motor / Antrieb", "Warnleuchte im Display",
+  "Undichtigkeit (Öl, Diesel, Luft)", "Lenkung", "Karosserie / Aufbau", "Unfallschaden",
+  "Ladung / Ladungssicherung", "Türen / Plane / Bordwand", "Anhänger / Kupplung",
+  "Kühlung / Klimaanlage", "Tachograph / Fahrerkarte", "Ausrüstung", "Sonstiges (selbst eingeben)"
+];
+const ART_FREI = "Sonstiges (selbst eingeben)";
 
 let mode = null, answers = {}, photos = [], lastReport = null, sigDirty = false, verkehrssicher = null;
 const VS_WARN_HANDOVER = "Fahrzeug darf so nicht bewegt werden! Bitte sofort Disposition / Fuhrpark telefonisch informieren.";
@@ -304,22 +733,42 @@ document.querySelectorAll("[data-vs]").forEach(b => b.onclick = () => {
 });
 
 /* ---------- Navigation ---------- */
+let cur = "s-start", fwSession = false, zeTimer = null;
+const TITLES = { "s-fzg": "Fahrzeugkontrolle", "s-fs": "Führerscheinkontrolle", "s-nd": "🚨 Notdienst", "s-settings": "Einstellungen",
+  "s-done": "Startklar", "s-fw-login": "🔒 Fristenwächter", "s-fw": "Fristenwächter",
+  "s-ze": "⏱ Zeiterfassung", "s-ze-entry": "Arbeitszeit", "s-ze-abs": "Urlaub / Krank", "s-todo": "✅ ToDo", "s-todo-edit": "ToDo" };
+const EINGABE = ["s-form", "s-fs", "s-nd", "s-fw-edit", "s-ze-entry", "s-ze-abs", "s-todo-edit"];   // Seiten mit Eingaben, die verloren gehen können
 function show(id){
-  ["s-start","s-form","s-done","s-settings"].forEach(s => $("#"+s).classList.toggle("hidden", s !== id));
-  $("#formBar").classList.toggle("hidden", id !== "s-form");
+  cur = id;
+  ["s-start","s-fzg","s-form","s-fs","s-nd","s-done","s-settings","s-fw-login","s-fw","s-fw-edit","s-ze","s-ze-entry","s-ze-abs","s-todo","s-todo-edit"]
+    .forEach(s => $("#"+s).classList.toggle("hidden", s !== id));
+  if(id !== "s-ze") clearInterval(zeTimer);
+  $("#formBar").classList.toggle("hidden", !EINGABE.includes(id));
+  $("#btnSubmit").classList.toggle("alarm", id === "s-nd");
+  if(id === "s-fs") $("#btnSubmit").textContent = "Führerscheinkontrolle abschließen";
+  if(id === "s-nd") $("#btnSubmit").textContent = "🚨 Notdienst senden";
+  if(id === "s-fw-edit" || id === "s-ze-entry") $("#btnSubmit").textContent = "Speichern";
+  // Fristenwächter: beim Verlassen des Bereichs automatisch abmelden
+  if(!id.startsWith("s-fw")) fwSession = false;
   $("#backBtn").classList.toggle("hidden", id === "s-start");
-  $("#title").textContent = id === "s-form" ? MODES[mode].kurz : id === "s-settings" ? "Einstellungen" : "Fahrer-Kontrolle";
+  $("#title").textContent = id === "s-form" ? MODES[mode].kurz : TITLES[id] || "Startklar";
   // Startseite: Logo statt Titel
   $("#logo").classList.toggle("hidden", id !== "s-start");
   $("#title").classList.toggle("hidden", id === "s-start");
   window.scrollTo(0,0);
-  if(id === "s-start") renderHistory();
+  if(id === "s-start"){ renderHistory(); renderFsStatus(); renderFwStatus(); renderZeStatus(); renderTodoStatus(); }
   if(id === "s-form") sizeSig();
 }
 $("#backBtn").onclick = () => {
-  if(!$("#s-form").classList.contains("hidden") && !confirm("Kontrolle verwerfen?")) return;
-  show("s-start");
+  if(EINGABE.includes(cur) && !confirm("Eingaben verwerfen?")) return;
+  if(cur === "s-ze-entry" || cur === "s-ze-abs") return zeZeigen();
+  if(cur === "s-todo-edit") return todoZeigen();
+  show(cur === "s-form" || cur === "s-nd" ? "s-fzg" : cur === "s-fw-edit" ? "s-fw" : "s-start");
 };
+$("#goNd").onclick = () => startNd();
+$("#goFzg").onclick = () => show("s-fzg");
+$("#goFs").onclick = () => startFs();
+$("#fsDue").onclick = () => startFs();
 $("#btnHome").onclick = () => show("s-start");
 document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => startForm(b.dataset.mode));
 
@@ -328,12 +777,14 @@ function nowLocal(){ const d = new Date(); d.setMinutes(d.getMinutes() - d.getTi
 
 function startForm(m){
   mode = m; answers = {}; photos = [];
-  const isHand = m !== "abfahrt";
+  const isHand = m === "uebergabe" || m === "uebernahme";
   const last = store.get("lastDriver", {});
   $("#f-fahrer").value = last.fahrer || "";
   $("#f-kennz").value = (last.kennz || "").replace(/[^A-Z0-9]/g, "");
   $("#f-anh").value = (last.anh || "").replace(/[^A-Z0-9]/g, "");
-  ["f-km","f-von","f-bis","f-vertr","f-tank","f-adblue","f-schl","f-bem"].forEach(id => $("#"+id).value = "");
+  ["f-km","f-von","f-bis","f-vertr","f-tank","f-adblue","f-schl","f-bem","f-ort"].forEach(id => $("#"+id).value = "");
+  $("#mangelFields").classList.toggle("hidden", m !== "mangel");
+  $("#btnSubmit").textContent = m === "mangel" ? "Mangel melden" : "Kontrolle abschließen";
   $("#f-zeit").value = nowLocal();
   $("#f-bestaet").checked = false;
   verkehrssicher = null; $("#f-vsgrund").value = "";
@@ -344,7 +795,8 @@ function startForm(m){
   if(isHand) $("#l-vertr").textContent = MODES[m].vertr;
   $("#l-bestaet").textContent = MODES[m].bestaet;
   $("#photoHint").textContent = MODES[m].fotoHint;
-  renderChecklist(isHand ? [...BASE, HANDOVER] : BASE);
+  if(m === "mangel") renderDefectList();
+  else renderChecklist(isHand ? [...BASE, HANDOVER] : BASE);
   renderPhotos();
   show("s-form");
   clearSig();
@@ -409,6 +861,56 @@ function renderChecklist(groups){
   });
 }
 
+/* ---------- Mängelmelder: frei erfasste Mängel ---------- */
+let defectNo = 0;
+function renderDefectList(){
+  defectNo = 0;
+  const wrap = $("#checklist"); wrap.innerHTML = "";
+  const card = document.createElement("div"); card.className = "card"; card.id = "defectCard";
+  card.innerHTML = `<h2>Gemeldete Mängel</h2><div id="defectItems"></div>
+    <button type="button" class="btn sec" id="addDefect">+ weiteren Mangel hinzufügen</button>`;
+  wrap.appendChild(card);
+  $("#addDefect").onclick = () => addDefect(true);
+  addDefect(false);
+}
+function addDefect(focus){
+  const key = "m-" + (++defectNo);
+  // Status "bad" fest: Beschreibung und Foto werden wie bei der Checkliste erzwungen
+  answers[key] = { gruppe: "Gemeldete Mängel", punkt: "", status: "bad", note: "" };
+  const it = document.createElement("div"); it.className = "item isbad"; it.dataset.key = key;
+  it.innerHTML = `<div class="q" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Mangel ${defectNo}</span>
+      <button type="button" class="btn sec small rm">Entfernen</button></div>
+    <select class="art"><option value="">– Art des Mangels wählen* –</option>${MANGEL_ARTEN.map(a => `<option>${esc(a)}</option>`).join("")}</select>
+    <input class="artFrei hidden" style="margin-top:8px" placeholder="Art des Mangels eingeben* (z.B. Kühlaggregat)">
+    <div class="defect">
+      <textarea class="note" placeholder="Was ist passiert / was ist defekt?*"></textarea>
+      <label class="btn sec">📷 Foto zum Mangel (Pflicht)
+        <input type="file" accept="image/*" capture="environment" multiple class="hidden">
+      </label>
+      <div class="photos"></div>
+    </div>`;
+  // Bei "Sonstiges" gibt der Fahrer die Art als Freitext ein
+  const sel = it.querySelector(".art"), frei = it.querySelector(".artFrei");
+  const setArt = () => { answers[key].punkt = sel.value === ART_FREI ? frei.value.trim() : sel.value; };
+  sel.onchange = () => {
+    frei.classList.toggle("hidden", sel.value !== ART_FREI);
+    if(sel.value === ART_FREI) frei.focus();
+    setArt();
+  };
+  frei.oninput = setArt;
+  it.querySelector(".note").oninput = e => answers[key].note = e.target.value;
+  it.querySelector("input[type=file]").onchange = async e => { await addPhotos(e.target.files, key); e.target.value = ""; it.classList.remove("missing"); };
+  it.querySelector(".rm").onclick = () => {
+    if($("#defectItems").children.length === 1) return toast("Mindestens ein Mangel muss gemeldet werden");
+    delete answers[key];
+    photos = photos.filter(p => p.key !== key);
+    it.remove(); renderPhotos();
+  };
+  $("#defectItems").appendChild(it);
+  if(focus) it.querySelector(".art").focus();
+}
+
 /* ---------- Fotos ---------- */
 $("#photoInput").onchange = async e => { await addPhotos(e.target.files, null); e.target.value = ""; };
 // key = Prüfpunkt, zu dem das Foto gehört (null = allgemeines Foto)
@@ -416,11 +918,11 @@ async function addPhotos(files, key){
   for(const f of files){ try{ photos.push({ data: await shrink(f), text: "", key }); }catch(err){} }
   renderPhotos();
 }
-function shrink(file){
+function shrink(file, max = 1280){
   return new Promise((res, rej) => {
     const img = new Image(), url = URL.createObjectURL(file);
     img.onload = () => {
-      const max = 1280, r = Math.min(1, max / Math.max(img.width, img.height));
+      const r = Math.min(1, max / Math.max(img.width, img.height));
       const c = document.createElement("canvas"); c.width = Math.round(img.width*r); c.height = Math.round(img.height*r);
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", 0.72));
@@ -471,20 +973,24 @@ $("#sigClear").onclick = clearSig;
 window.addEventListener("resize", () => { if(!$("#s-form").classList.contains("hidden") && !sigDirty) sizeSig(); });
 
 /* ---------- Abschließen ---------- */
-$("#btnSubmit").onclick = () => {
+$("#btnSubmit").onclick = () => cur === "s-fs" ? submitFs() : cur === "s-nd" ? submitNd() : cur === "s-fw-edit" ? fwSpeichern()
+  : cur === "s-ze-entry" ? zeEintragSpeichern() : cur === "s-ze-abs" ? zeAbwSenden() : cur === "s-todo-edit" ? todoSpeichern() : submitCheck();
+function submitCheck(){
   const err = [];
   const v = id => $("#"+id).value.trim();
   if(!v("f-fahrer")) err.push("Fahrer");
   if(!v("f-kennz")) err.push("Kennzeichen");
   if(!v("f-km")) err.push("Kilometerstand");
-  if(mode !== "abfahrt"){ if(!v("f-tank")) err.push("Tankfüllstand"); if(!v("f-adblue")) err.push("AdBlue"); }
-  let firstMissing = null, open = 0, noNote = 0, noPhoto = 0;
+  if(mode === "uebergabe" || mode === "uebernahme"){ if(!v("f-tank")) err.push("Tankfüllstand"); if(!v("f-adblue")) err.push("AdBlue"); }
+  let firstMissing = null, open = 0, noNote = 0, noPhoto = 0, noArt = 0;
   document.querySelectorAll("#checklist .item").forEach(it => {
     const key = it.dataset.key, a = answers[key];
     const bad = a.status === "bad";
     const missNote = bad && !a.note.trim(), missPhoto = bad && photoCount(key) === 0;
-    const miss = !a.status || missNote || missPhoto;
+    const missArt = !a.punkt;   // nur im Mängelmelder möglich
+    const miss = !a.status || missNote || missPhoto || missArt;
     it.classList.toggle("missing", miss);
+    if(missArt) noArt++;
     if(!a.status) open++;
     if(missNote) noNote++;
     if(missPhoto) noPhoto++;
@@ -492,6 +998,7 @@ $("#btnSubmit").onclick = () => {
   });
   if(open) err.push(open + " Prüfpunkt(e) offen");
   if(noNote) err.push(noNote + " Mangel ohne Beschreibung");
+  if(noArt) err.push(noArt + " Mangel ohne Art");
   if(noPhoto) err.push(noPhoto + " Mangel ohne Foto");
   const vsMiss = verkehrssicher === null || (verkehrssicher === false && !v("f-vsgrund"));
   $("#vsCard").classList.toggle("missing", vsMiss);
@@ -505,11 +1012,1243 @@ $("#btnSubmit").onclick = () => {
     (firstMissing || $("#f-fahrer")).scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
-  store.set("lastDriver", { fahrer: v("f-fahrer"), kennz: v("f-kennz").toUpperCase(), anh: v("f-anh").toUpperCase() });
+  store.set("lastDriver", Object.assign(store.get("lastDriver", {}),
+    { fahrer: v("f-fahrer"), kennz: v("f-kennz").toUpperCase(), anh: v("f-anh").toUpperCase() }));
   lastReport = buildReport();
   saveHistory(lastReport);
   showDone(lastReport);
 };
+
+/* ---------- Notdienst ---------- */
+const ND_ARTEN = [
+  ["🔧", "Panne / Defekt"], ["💥", "Unfall"], ["🛞", "Reifenschaden"], ["⛓", "Teil abgerissen / verloren"],
+  ["⚠", "Warnleuchte / Motor"], ["📦", "Ladung / Aufbau"], ["❓", "Sonstiges"]
+];
+const ND_MAX_MB = 20;   // übliche Grenze für E-Mail-Anhänge
+let ndArt = null, ndWf = null, ndPhotos = [], ndVideos = [], ndGeo = null;
+
+/* GPS-Standort für den Notdienst */
+const geoText = g => `${g.lat.toFixed(5)}, ${g.lon.toFixed(5)}`;
+const geoLink = g => `https://maps.google.com/?q=${g.lat.toFixed(6)},${g.lon.toFixed(6)}`;
+// Standortfeld enthält nur die automatisch eingetragenen Koordinaten -> nicht doppelt ausgeben
+const nurGps = r => r.geo && r.ort === "GPS: " + geoText(r.geo);
+function renderNdGeo(msg){
+  $("#ndGeoInfo").innerHTML = msg || (ndGeo
+    ? `📍 <b>${geoText(ndGeo)}</b> (± ${Math.round(ndGeo.acc)} m) · <a href="${geoLink(ndGeo)}" target="_blank" rel="noopener">auf Karte prüfen</a>`
+    : "");
+}
+$("#ndGeoBtn").onclick = () => {
+  if(!navigator.geolocation){ renderNdGeo("Standortermittlung wird auf diesem Gerät nicht unterstützt."); return; }
+  const btn = $("#ndGeoBtn");
+  btn.disabled = true; btn.textContent = "📍 Standort wird ermittelt …";
+  navigator.geolocation.getCurrentPosition(pos => {
+    ndGeo = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy };
+    if(!$("#nd-ort").value.trim()) $("#nd-ort").value = "GPS: " + geoText(ndGeo);
+    btn.disabled = false; btn.textContent = "📍 Standort erneut ermitteln";
+    renderNdGeo();
+  }, err => {
+    btn.disabled = false; btn.textContent = "📍 Standort ermitteln (GPS)";
+    renderNdGeo(`<span style="color:var(--bad)">${err.code === 1
+      ? "Kein Zugriff auf den Standort – bitte in den Einstellungen erlauben."
+      : "Standort nicht gefunden – bitte GPS einschalten oder Standort von Hand eintragen."}</span>`);
+  }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 });
+};
+
+function startNd(){
+  mode = "notdienst"; ndArt = null; ndWf = null; ndPhotos = []; ndVideos = []; ndGeo = null;
+  renderNdGeo(); $("#ndGeoBtn").disabled = false; $("#ndGeoBtn").textContent = "📍 Standort ermitteln (GPS)";
+  const last = store.get("lastDriver", {});
+  $("#nd-fahrer").value = last.fahrer || "";
+  $("#nd-tel").value = last.tel || "";
+  $("#nd-kennz").value = (last.kennz || "").replace(/[^A-Z0-9]/g, "");
+  $("#nd-anh").value = (last.anh || "").replace(/[^A-Z0-9]/g, "");
+  ["nd-ort","nd-km","nd-beschr","nd-artfrei"].forEach(id => $("#"+id).value = "");
+  $("#nd-zeit").value = nowLocal();
+  $("#nd-artfrei").classList.add("hidden");
+  document.querySelectorAll("#s-nd .missing").forEach(x => x.classList.remove("missing"));
+  document.querySelectorAll("[data-wf]").forEach(x => x.className = "");
+  $("#ndWfWarn").classList.add("hidden");
+  $("#ndArt").innerHTML = ND_ARTEN.map(([icon, t], i) => `<button type="button" data-i="${i}">${icon} ${esc(t)}</button>`).join("");
+  $("#ndArt").querySelectorAll("button").forEach(b => b.onclick = () => {
+    ndArt = ND_ARTEN[+b.dataset.i][1];
+    $("#ndArt").querySelectorAll("button").forEach(x => x.className = x === b ? "on bad" : "");
+    $("#nd-artfrei").classList.toggle("hidden", ndArt !== "Sonstiges");
+    if(ndArt === "Sonstiges") $("#nd-artfrei").focus();
+    $("#ndArtCard").classList.remove("missing");
+  });
+  try{ if(window.Android && Android.resetVideos) Android.resetVideos(); }catch(e){}
+  renderNdMedia();
+  show("s-nd");
+}
+
+document.querySelectorAll("[data-wf]").forEach(b => b.onclick = () => {
+  ndWf = b.dataset.wf === "ja";
+  document.querySelectorAll("[data-wf]").forEach(x => x.className = x === b ? "on " + (ndWf ? "ok" : "bad") : "");
+  $("#ndWfWarn").classList.toggle("hidden", ndWf);
+  $("#ndWfCard").classList.remove("missing");
+});
+
+$("#ndFoto").onchange = async e => {
+  for(const f of e.target.files){ try{ ndPhotos.push(await shrink(f, 1600)); }catch(err){} }
+  e.target.value = ""; renderNdMedia();
+};
+$("#ndVideo").onchange = e => {
+  // Android merkt sich die Videos zusätzlich selbst (für den Mail-Anhang) – Reihenfolge ist dieselbe
+  for(const f of e.target.files) ndVideos.push(f);
+  e.target.value = ""; renderNdMedia();
+};
+
+const mb = bytes => (bytes / 1048576).toFixed(1).replace(".", ",") + " MB";
+function renderNdMedia(){
+  const w = $("#ndPhotos"); w.innerHTML = "";
+  ndPhotos.forEach((p, i) => {
+    const d = document.createElement("div");
+    d.innerHTML = `<img src="${p}" alt=""><button type="button" aria-label="Entfernen">×</button>`;
+    d.querySelector("button").onclick = () => { ndPhotos.splice(i, 1); renderNdMedia(); };
+    w.appendChild(d);
+  });
+  const v = $("#ndVideos"); v.innerHTML = "";
+  ndVideos.forEach((f, i) => {
+    const d = document.createElement("div"); d.className = "vid";
+    d.innerHTML = `<span>🎥 Video ${i + 1} · ${mb(f.size)}</span><button type="button" class="btn sec small">Entfernen</button>`;
+    d.querySelector("button").onclick = () => {
+      ndVideos.splice(i, 1);
+      try{ if(window.Android && Android.removeVideo) Android.removeVideo(i); }catch(e){}
+      renderNdMedia();
+    };
+    v.appendChild(d);
+  });
+  const total = ndVideos.reduce((s, f) => s + f.size, 0);
+  $("#ndSize").innerHTML = total > ND_MAX_MB * 1048576
+    ? `<span style="color:var(--bad);font-weight:600">Videos zusammen ${mb(total)} – evtl. zu groß für eine E-Mail. Bitte ein kürzeres Video aufnehmen.</span>`
+    : ndVideos.length ? `Videos zusammen: ${mb(total)}` : "";
+  if(ndPhotos.length || ndVideos.length) $("#ndMediaCard").classList.remove("missing");
+}
+
+function submitNd(){
+  const v = id => $("#"+id).value.trim();
+  const err = []; let first = null;
+  const need = (ok, name, el) => { if(!ok){ err.push(name); first = first || el; } };
+  need(v("nd-fahrer"), "Fahrer", $("#nd-fahrer"));
+  need(v("nd-kennz"), "Kennzeichen", $("#nd-kennz"));
+  need(v("nd-ort"), "Standort", $("#nd-ort"));
+  const artOk = ndArt && (ndArt !== "Sonstiges" || v("nd-artfrei"));
+  $("#ndArtCard").classList.toggle("missing", !artOk); need(artOk, "Was ist los", $("#ndArtCard"));
+  $("#ndBeschrCard").classList.toggle("missing", !v("nd-beschr")); need(v("nd-beschr"), "Beschreibung", $("#ndBeschrCard"));
+  $("#ndWfCard").classList.toggle("missing", ndWf === null); need(ndWf !== null, "Weiterfahrt ja/nein", $("#ndWfCard"));
+  const media = ndPhotos.length + ndVideos.length > 0;
+  $("#ndMediaCard").classList.toggle("missing", !media); need(media, "Foto oder Video", $("#ndMediaCard"));
+  if(err.length){
+    toast("Bitte ergänzen: " + err.join(", "));
+    first.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  const s = settings(), zeit = v("nd-zeit");
+  const art = ndArt === "Sonstiges" ? "Sonstiges: " + v("nd-artfrei") : ndArt;
+  const r = {
+    id: Date.now(), mode: "notdienst", modeName: "Notdienst",
+    fahrer: v("nd-fahrer"), tel: v("nd-tel"), kennz: v("nd-kennz"), anh: v("nd-anh"), ort: v("nd-ort"), km: v("nd-km"),
+    zeit, zeitText: fmtDateTime(zeit || new Date()), art, beschr: v("nd-beschr"), wf: ndWf, vs: ndWf, geo: ndGeo,
+    photos: ndPhotos.map((data, i) => ({ data, text: "Foto " + (i + 1) })), videos: ndVideos.slice(),
+    maengel: [], items: []
+  };
+  r.subject = `NOTDIENST – ${r.kennz}`;
+  r.text = [
+    "!!! NOTDIENST !!!", "",
+    `Fahrer: ${r.fahrer}` + (r.tel ? ` · Rückruf: ${r.tel}` : ""),
+    `Fahrzeug: ${r.kennz}` + (r.anh ? ` / Anhänger: ${r.anh}` : ""),
+    ...(nurGps(r) ? [] : [`Standort: ${r.ort}`]),
+    ...(r.geo ? [`GPS: ${geoText(r.geo)} (± ${Math.round(r.geo.acc)} m)`, `Karte: ${geoLink(r.geo)}`] : []),
+    ...(r.km ? [`km-Stand: ${r.km}`] : []),
+    `Zeitpunkt: ${r.zeitText}`, "",
+    `Was ist los: ${art}`,
+    `Beschreibung: ${r.beschr}`, "",
+    r.wf ? "Weiterfahrt: MÖGLICH" : "Weiterfahrt: NICHT MÖGLICH – Reparatur nötig!", "",
+    `Fotos: ${r.photos.length}` + (r.photos.length ? " (im PDF)" : "") + ` · Videos: ${r.videos.length}` + (r.videos.length ? " (als Anhang)" : "")
+  ].join("\n");
+  store.set("lastDriver", Object.assign(store.get("lastDriver", {}),
+    { fahrer: r.fahrer, tel: r.tel, kennz: r.kennz, anh: r.anh }));
+  lastReport = r;
+  saveHistory(r);
+  showDone(r);
+}
+
+function buildNdPdf(r){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210, M = 15; let y = 18;
+  const need = h => { if(y + h > 282){ doc.addPage(); y = 18; } };
+  const s = settings();
+  doc.addImage(LOGO, "PNG", W - M - 55, 9, 55, 55 * 111 / 800);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.setTextColor(198,40,40); doc.text("NOTDIENST", M, y); doc.setTextColor(0); y += 7;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(90); doc.text(s.firma, M, y); doc.setTextColor(0); y += 9;
+  const info = [["Fahrer", r.fahrer], ...(r.tel ? [["Rückruf", r.tel]] : []),
+    ["Fahrzeug", r.kennz + (r.anh ? " / Anhänger " + r.anh : "")], ...(nurGps(r) ? [] : [["Standort", r.ort]]),
+    ...(r.km ? [["km-Stand", r.km]] : []), ["Zeitpunkt", r.zeitText], ["Was ist los", r.art]];
+  doc.setFontSize(11);
+  info.forEach(([k, val]) => {
+    const t = doc.splitTextToSize(String(val), W - 2*M - 35);
+    doc.setFont("helvetica","bold"); doc.text(k + ":", M, y); doc.setFont("helvetica","normal"); doc.text(t, M + 35, y); y += 6 * t.length;
+  });
+  if(r.geo){
+    doc.setFont("helvetica","bold"); doc.text("GPS:", M, y); doc.setFont("helvetica","normal");
+    doc.text(`${geoText(r.geo)} (± ${Math.round(r.geo.acc)} m)  `, M + 35, y);
+    doc.setTextColor(31,78,121);
+    doc.textWithLink("Auf Karte öffnen", M + 35 + doc.getTextWidth(`${geoText(r.geo)} (± ${Math.round(r.geo.acc)} m)  `), y, { url: geoLink(r.geo) });
+    doc.setTextColor(0); y += 6;
+  }
+  y += 3;
+  if(r.wf){ doc.setFillColor(229,245,236); doc.setTextColor(30,142,74); }
+  else { doc.setFillColor(253,234,234); doc.setTextColor(198,40,40); }
+  doc.rect(M, y - 5, W - 2*M, 9, "F"); doc.setFont("helvetica","bold"); doc.setFontSize(12);
+  doc.text(r.wf ? "Weiterfahrt möglich" : "KEINE WEITERFAHRT – Reparatur nötig", M + 3, y + 1);
+  doc.setTextColor(0); y += 12;
+  doc.setFontSize(11); doc.text("Beschreibung", M, y); y += 5;
+  doc.setFont("helvetica","normal"); doc.setFontSize(10);
+  const b = doc.splitTextToSize(r.beschr, W - 2*M); need(b.length * 5); doc.text(b, M, y); y += b.length * 5 + 4;
+  if(r.videos.length){ doc.setTextColor(90); doc.text(`${r.videos.length} Video(s) als separater Anhang der E-Mail.`, M, y); doc.setTextColor(0); y += 6; }
+  if(r.photos.length){
+    doc.addPage(); y = 18; doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text("Fotos", M, y); y += 6;
+    const cw = 88; let col = 0;
+    doc.setFont("helvetica","normal"); doc.setFontSize(9);
+    r.photos.forEach(p => {
+      const pr = doc.getImageProperties(p.data);
+      const h = Math.min(cw * pr.height / pr.width, 110), w = h * pr.width / pr.height;
+      if(y + h + 8 > 285){ doc.addPage(); y = 18; col = 0; }
+      const x = M + col * (cw + 4);
+      doc.addImage(p.data, "JPEG", x, y, w, h); doc.text(p.text, x, y + h + 4);
+      if(col === 1){ y += 120; col = 0; } else col = 1;
+    });
+  }
+  const pages = doc.getNumberOfPages();
+  for(let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(`NOTDIENST ${r.kennz} · ${r.zeitText} · Seite ${i}/${pages}`, W/2, 292, { align: "center" }); }
+  return doc;
+}
+
+/* ---------- Zeiterfassung (lokal, Versand per E-Mail) ---------- */
+// Rechenregeln wie in der Server-Zeiterfassung: Tages-Soll = Wochenstunden / Arbeitstage,
+// Urlaub/Krank wird mit dem Tages-Soll gutgeschrieben, Feiertage zählen nicht als Arbeitstag.
+const WT = ["", "Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+const pad2 = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const hm = iso => { const d = new Date(iso); return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); };
+const wochentag = date => { const w = new Date(date + "T12:00:00").getDay(); return w === 0 ? 7 : w; };
+const fmtH = (min, vz) => { const n = Math.round(Math.abs(min)); return (vz ? (min < 0 ? "−" : "+") : (min < 0 ? "−" : "")) + Math.floor(n / 60) + ":" + pad2(n % 60); };
+const fmtTage = n => String(n).replace(".", ",") + (n === 1 ? " Tag" : " Tage");
+function tageVonBis(von, bis){ const out = [], d = new Date(von + "T12:00:00"), e = new Date(bis + "T12:00:00");
+  while(d <= e){ out.push(ymd(d)); d.setDate(d.getDate() + 1); } return out; }
+const monatVon = (m, n) => { const [y, mo] = m.split("-").map(Number); const d = new Date(y, mo - 1 + n, 1); return d.getFullYear() + "-" + pad2(d.getMonth() + 1); };
+const monatText = m => new Date(m + "-15T12:00:00").toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+
+const zeCfg = () => Object.assign({ std: 40, urlaub: 26, tage: [1, 2, 3, 4, 5], beginn: null, land: "LU", mail: "" }, store.get("zeCfg", {}));
+const zeDaten = () => Object.assign({ entries: [], absences: [], log: [] }, store.get("ze", {}));
+function zeSpeichernDaten(d, aktion, details){
+  if(aktion) d.log.push({ ts: new Date().toISOString(), aktion, details: details || null });
+  store.set("ze", d);
+}
+const zeName = () => (store.get("lastDriver", {}).fahrer || "").trim();
+const zeMail = () => zeCfg().mail || settings().empfaenger;
+
+// Feiertage (Vorlagen wie in der Server-Zeiterfassung)
+function ostern(y){
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  return new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1, 12);
+}
+const feiertagCache = {};
+function feiertage(y){
+  const land = zeCfg().land, key = land + y;
+  if(feiertagCache[key]) return feiertagCache[key];
+  const o = ostern(y), rel = n => { const d = new Date(o); d.setDate(d.getDate() + n); return ymd(d); }, fix = (m, d) => `${y}-${pad2(m)}-${pad2(d)}`;
+  const l = land === "LU"
+    ? [[fix(1,1),"Neujahr"],[rel(1),"Ostermontag"],[fix(5,1),"Tag der Arbeit"],[fix(5,9),"Europatag"],[rel(39),"Christi Himmelfahrt"],
+       [rel(50),"Pfingstmontag"],[fix(6,23),"Nationalfeiertag"],[fix(8,15),"Mariä Himmelfahrt"],[fix(11,1),"Allerheiligen"],
+       [fix(12,25),"1. Weihnachtstag"],[fix(12,26),"2. Weihnachtstag"]]
+    : [[fix(1,1),"Neujahr"],[rel(-2),"Karfreitag"],[rel(1),"Ostermontag"],[fix(5,1),"Tag der Arbeit"],[rel(39),"Christi Himmelfahrt"],
+       [rel(50),"Pfingstmontag"],[fix(10,3),"Tag der Deutschen Einheit"],[fix(12,25),"1. Weihnachtstag"],[fix(12,26),"2. Weihnachtstag"]];
+  return feiertagCache[key] = new Map(l);
+}
+const feiertag = date => feiertage(+date.slice(0, 4)).get(date) || null;
+const arbeitstageZaehlen = (von, bis) => { const t = zeCfg().tage; return tageVonBis(von, bis).filter(d => t.includes(wochentag(d)) && !feiertag(d)).length; };
+
+function minuten(e, now = new Date()){
+  const ende = e.end ? new Date(e.end) : now;
+  let p = e.pause || 0;
+  if(!e.end && e.pauseStart) p += Math.max(0, (now - new Date(e.pauseStart)) / 60000);
+  return Math.max(0, Math.round((ende - new Date(e.start)) / 60000 - p));
+}
+const zeOffen = d => d.entries.find(e => !e.end);
+// Abwesenheiten, die Soll gutschreiben: genehmigter Urlaub/Sonderurlaub, Krankmeldungen
+const zaehlt = a => a.status === "genehmigt" || (a.type === "krank" && a.status === "gemeldet");
+const abwText = a => a.type === "krank" ? (a.au ? "Krank mit AU" : "Krank ohne AU") : a.type === "urlaub" ? "Urlaub" : "Sonderurlaub";
+const statusText = a => ({ beantragt: "beantragt", genehmigt: "genehmigt", abgelehnt: "abgelehnt", storniert: "zurückgezogen", gemeldet: "gemeldet" })[a.status];
+
+function zeMonatsbericht(monat){
+  const d = zeDaten(), cfg = zeCfg(), heute = isoHeute();
+  const [y, m] = monat.split("-").map(Number);
+  const first = monat + "-01", last = monat + "-" + pad2(new Date(y, m, 0).getDate());
+  const soll = cfg.tage.length ? cfg.std * 60 / cfg.tage.length : 0;
+  const seit = cfg.beginn || heute;
+  const abw = d.absences.filter(a => zaehlt(a) && a.start <= last && a.end >= first);
+  const tage = tageVonBis(first, last).map(date => {
+    const ft = feiertag(date), arbeit = date >= seit && cfg.tage.includes(wochentag(date)) && !ft;
+    const ziel = arbeit ? soll : 0;
+    const a = abw.find(x => x.start <= date && x.end >= date);
+    const gut = a && arbeit ? (a.half ? ziel / 2 : ziel) : 0;
+    const eintraege = d.entries.filter(e => ymd(new Date(e.start)) === date).sort((p, q) => p.start.localeCompare(q.start));
+    const ist = eintraege.reduce((s, e) => s + minuten(e), 0);
+    const brutto = eintraege.reduce((s, e) => s + minuten({ ...e, pause: 0, pauseStart: null }), 0);
+    const pausen = brutto - ist, hinweise = [];
+    if(ist > 600) hinweise.push("Mehr als 10 Stunden Arbeitszeit");
+    if(ist > 540 && pausen < 45) hinweise.push("Über 9 Std. – mind. 45 Min. Pause erforderlich");
+    else if(ist > 360 && pausen < 30) hinweise.push("Über 6 Std. – mind. 30 Min. Pause erforderlich");
+    return { date, wt: wochentag(date), feiertag: ft, soll: Math.round(ziel), ist, gut: Math.round(gut),
+      abw: a ? abwText(a) + (a.half ? " (½ Tag)" : "") : null, saldo: date <= heute ? Math.round(ist + gut - ziel) : 0, hinweise, eintraege };
+  });
+  const sum = tage.reduce((t, x) => ({ sollBisHeute: t.sollBisHeute + (x.date <= heute ? x.soll : 0), soll: t.soll + x.soll,
+    ist: t.ist + x.ist, gut: t.gut + x.gut, saldo: t.saldo + x.saldo }), { sollBisHeute: 0, soll: 0, ist: 0, gut: 0, saldo: 0 });
+  return { monat, tage, sum };
+}
+
+function zeKonto(jahr){
+  const d = zeDaten(), u = d.absences.filter(a => a.type === "urlaub" && a.start.slice(0, 4) === String(jahr));
+  const s = st => u.filter(a => a.status === st).reduce((x, a) => x + a.days, 0);
+  const anspruch = zeCfg().urlaub, genommen = s("genehmigt"), beantragt = s("beantragt");
+  return { anspruch, genommen, beantragt, verfuegbar: anspruch - genommen - beantragt };
+}
+
+/* Startseite */
+function renderZeStatus(){
+  const o = zeOffen(zeDaten());
+  $("#zeStatus").innerHTML = !o ? "Stempeluhr, Arbeitszeiten, Urlaub &amp; Krankmeldung"
+    : o.pauseStart ? `<span style="color:#b07d00;font-weight:600">⏸ In Pause seit ${hm(o.pauseStart)}</span>`
+    : `<span style="color:var(--ok);font-weight:600">● Eingestempelt seit ${hm(o.start)}</span>`;
+}
+
+/* Bereich öffnen / Reiter */
+let zeTab = "uhr", zeMonat = ymd(new Date()).slice(0, 7), zeJahr = new Date().getFullYear();
+$("#goZe").onclick = () => zeZeigen("uhr");
+function zeZeigen(tab){
+  const cfg = zeCfg();
+  if(!cfg.beginn){ cfg.beginn = isoHeute(); store.set("zeCfg", cfg); }   // Soll zählt ab erster Nutzung
+  show("s-ze");
+  zeTab = tab || zeTab;
+  document.querySelectorAll("#zeTabs button").forEach(b => b.classList.toggle("on", b.dataset.zetab === zeTab));
+  document.querySelectorAll("#s-ze [data-zepane]").forEach(p => p.classList.toggle("hidden", p.dataset.zepane !== zeTab));
+  zeRender();
+}
+document.querySelectorAll("#zeTabs button").forEach(b => b.onclick = () => zeZeigen(b.dataset.zetab));
+
+function zeRender(){
+  clearInterval(zeTimer);
+  if(zeTab === "uhr") zeRenderUhr();
+  if(zeTab === "zeiten") zeRenderZeiten();
+  if(zeTab === "abw") zeRenderAbw();
+}
+
+/* Stempeluhr */
+$("#ze-name").addEventListener("change", () => {
+  store.set("lastDriver", Object.assign(store.get("lastDriver", {}), { fahrer: $("#ze-name").value.trim() }));
+});
+function zeRenderUhr(){
+  $("#zeNameCard").classList.toggle("hidden", !!zeName());
+  $("#ze-name").value = zeName();
+  const d = zeDaten(), o = zeOffen(d), pause = !!(o && o.pauseStart);
+  $("#zeDatum").textContent = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  $("#zeDot").className = "dot" + (o ? (pause ? " pause" : " on") : "");
+  $("#zeStatusText").textContent = !o ? "Nicht eingestempelt" : pause ? `In Pause seit ${hm(o.pauseStart)}` : `Eingestempelt seit ${hm(o.start)}`;
+  $("#zePauseInfo").textContent = o && o.pause ? `· Pause ${o.pause} min` : "";
+  $("#zeActions").innerHTML = !o
+    ? '<button class="btn ok" type="button" data-act="ein">Einstempeln</button>'
+    : `<button class="btn sec" type="button" data-act="pause">${pause ? "Pause beenden" : "Pause starten"}</button>
+       <button class="btn alarm" type="button" data-act="aus">Ausstempeln</button>`;
+  $("#zeActions").querySelectorAll("button").forEach(b => b.onclick = () => zeStempeln(b.dataset.act));
+  const tick = () => {
+    const now = new Date();
+    $("#zeClock").textContent = pad2(now.getHours()) + ":" + pad2(now.getMinutes()) + ":" + pad2(now.getSeconds());
+    const heute = isoHeute();
+    $("#zeHeute").textContent = fmtH(zeDaten().entries.filter(e => ymd(new Date(e.start)) === heute).reduce((s, e) => s + minuten(e, now), 0));
+  };
+  tick();
+  zeTimer = setInterval(tick, 1000);
+}
+function zeStempeln(act){
+  if(!zeName()){
+    const n = $("#ze-name").value.trim();
+    if(!n){ toast("Bitte zuerst deinen Namen eintragen"); $("#ze-name").focus(); return; }
+    store.set("lastDriver", Object.assign(store.get("lastDriver", {}), { fahrer: n }));
+  }
+  const d = zeDaten(), o = zeOffen(d), now = new Date().toISOString();
+  if(act === "ein" && !o){
+    d.entries.push({ id: "e" + Date.now(), start: now, end: null, pause: 0, pauseStart: null, note: "", source: "stempel" });
+    zeSpeichernDaten(d, "Einstempeln"); toast("Eingestempelt");
+  }
+  if(act === "pause" && o){
+    if(o.pauseStart){ o.pause += Math.round((Date.now() - new Date(o.pauseStart)) / 60000); o.pauseStart = null; zeSpeichernDaten(d, "Pause Ende"); toast("Pause beendet"); }
+    else { o.pauseStart = now; zeSpeichernDaten(d, "Pause Start"); toast("Pause gestartet"); }
+  }
+  if(act === "aus" && o){
+    if(o.pauseStart){ o.pause += Math.round((Date.now() - new Date(o.pauseStart)) / 60000); o.pauseStart = null; }
+    o.end = now;
+    zeSpeichernDaten(d, "Ausstempeln");
+    toast(`Ausgestempelt – ${fmtH(minuten(o))} h erfasst`);
+  }
+  zeRenderUhr(); renderZeStatus();
+}
+
+/* Arbeitszeiten (Monat) */
+$("#zeMonPrev").onclick = () => { zeMonat = monatVon(zeMonat, -1); zeRender(); };
+$("#zeMonNext").onclick = () => { zeMonat = monatVon(zeMonat, 1); zeRender(); };
+function zeRenderZeiten(){
+  const r = zeMonatsbericht(zeMonat), s = r.sum, heute = isoHeute();
+  $("#zeMonLabel").textContent = monatText(zeMonat);
+  $("#zeStats").innerHTML = `<div><b>${fmtH(s.sollBisHeute)}</b><span>Soll bis heute</span></div><div><b>${fmtH(s.ist)}</b><span>Gearbeitet</span></div>
+    <div><b>${fmtH(s.gut)}</b><span>Urlaub/Krank</span></div><div><b class="${s.saldo < 0 ? "neg" : "pos"}">${fmtH(s.saldo, true)}</b><span>Saldo</span></div>`;
+  const tage = r.tage.filter(t => t.date <= heute || t.abw || t.feiertag).reverse().filter(t => t.ist || t.abw || t.feiertag || t.soll || t.eintraege.length);
+  $("#zeTage").innerHTML = !tage.length ? '<p class="hint" style="margin:0">Keine Einträge in diesem Monat.</p>' : tage.map(t => `<div class="ze-tag">
+    <div class="kopf"><span>${WT[t.wt]}, ${fmtIso(t.date)}</span><span>${t.ist ? fmtH(t.ist) + " h" : ""}</span></div>
+    ${t.feiertag ? `<div class="hint">Feiertag: ${esc(t.feiertag)}</div>` : ""}
+    ${t.abw ? `<div><span class="tag ${t.abw.startsWith("Krank") ? "bad" : "ok"}">${esc(t.abw)}</span></div>` : ""}
+    ${t.eintraege.map(e => `<div class="ze-eintrag"><span>${hm(e.start)} – ${e.end ? hm(e.end) : "<b>läuft</b>"}${e.pause ? ` · Pause ${e.pause} min` : ""}${
+      e.source === "nachgetragen" ? ' · <span class="hint">nachgetragen</span>' : e.geaendert ? ' · <span class="hint">geändert</span>' : ""}${e.note ? `<br><span class="hint">${esc(e.note)}</span>` : ""}</span>
+      ${e.end ? `<button type="button" class="btn sec small" data-edit="${e.id}">Bearbeiten</button>` : ""}</div>`).join("")}
+    ${!t.eintraege.length && !t.abw && !t.feiertag && t.soll ? '<div class="hint">Keine Zeiten erfasst</div>' : ""}
+    ${t.hinweise.map(h => `<div class="ze-warn">⚠ ${esc(h)}</div>`).join("")}
+  </div>`).join("");
+  $("#zeTage").querySelectorAll("[data-edit]").forEach(b => b.onclick = () => zeEintragBearbeiten(b.dataset.edit));
+}
+
+/* Zeit nachtragen / bearbeiten */
+let zeEditId = null;
+$("#zeNachtragen").onclick = () => zeEintragBearbeiten(null);
+function zeEintragBearbeiten(id){
+  const e = id ? zeDaten().entries.find(x => x.id === id) : null;
+  zeEditId = id;
+  $("#zee-datum").value = e ? ymd(new Date(e.start)) : isoHeute();
+  $("#zee-datum").max = isoHeute();
+  $("#zee-start").value = e ? hm(e.start) : "08:00";
+  $("#zee-ende").value = e ? hm(e.end) : "16:30";
+  $("#zee-pause").value = e ? e.pause : 30;
+  $("#zee-notiz").value = e ? e.note || "" : "";
+  $("#zeeLoeschen").classList.toggle("hidden", !e);
+  show("s-ze-entry");
+  $("#title").textContent = e ? "Eintrag bearbeiten" : "Arbeitszeit nachtragen";
+}
+function zeEintragSpeichern(){
+  const datum = $("#zee-datum").value, s = $("#zee-start").value, en = $("#zee-ende").value;
+  if(!datum || !s || !en) return toast("Bitte Datum, Beginn und Ende angeben");
+  const start = new Date(`${datum}T${s}`), ende = new Date(`${datum}T${en}`);
+  if(ende <= start) ende.setDate(ende.getDate() + 1);   // Schicht über Mitternacht
+  const pause = Number($("#zee-pause").value || 0);
+  // Prüfungen wie in der Server-Zeiterfassung
+  if(start > new Date(Date.now() + 5 * 60000)) return toast("Einträge in der Zukunft sind nicht möglich");
+  if(ende - start > 24 * 3600000) return toast("Ein Eintrag darf höchstens 24 Stunden umfassen");
+  if(!Number.isInteger(pause) || pause < 0) return toast("Ungültige Pause");
+  if(pause >= (ende - start) / 60000) return toast("Die Pause ist länger als die Arbeitszeit");
+  const d = zeDaten();
+  const ueberschneidung = d.entries.some(x => x.id !== zeEditId && new Date(x.start) < ende && (x.end ? new Date(x.end) : new Date()) > start);
+  if(ueberschneidung) return toast("Der Eintrag überschneidet sich mit einem vorhandenen Eintrag");
+  const werte = { start: start.toISOString(), end: ende.toISOString(), pause, note: $("#zee-notiz").value.trim() };
+  if(zeEditId){
+    const e = d.entries.find(x => x.id === zeEditId);
+    const vorher = { start: e.start, end: e.end, pause: e.pause };
+    Object.assign(e, werte, { geaendert: true });
+    zeSpeichernDaten(d, "Eintrag geändert", { vorher, nachher: { start: e.start, end: e.end, pause: e.pause } });
+  } else {
+    d.entries.push(Object.assign({ id: "e" + Date.now(), pauseStart: null, source: "nachgetragen" }, werte));
+    zeSpeichernDaten(d, "Eintrag nachgetragen", werte);
+  }
+  toast("Gespeichert");
+  zeMonat = datum.slice(0, 7);
+  zeZeigen("zeiten");
+}
+$("#zeeLoeschen").onclick = () => {
+  if(!confirm("Diesen Eintrag wirklich löschen?")) return;
+  const d = zeDaten(), e = d.entries.find(x => x.id === zeEditId);
+  d.entries = d.entries.filter(x => x.id !== zeEditId);
+  zeSpeichernDaten(d, "Eintrag gelöscht", e && { start: e.start, end: e.end, pause: e.pause });
+  toast("Gelöscht");
+  zeZeigen("zeiten");
+};
+
+/* Monatsbericht & CSV */
+$("#zeBericht").onclick = () => {
+  if(!zeName()) return toast("Bitte zuerst unter Stempeluhr deinen Namen eintragen");
+  const b = zeMonatsbericht(zeMonat), s = b.sum;
+  const korr = zeDaten().log.filter(l => {
+    if(!/geändert|nachgetragen|gelöscht/.test(l.aktion)) return false;
+    const st = l.details ? (l.details.start || (l.details.nachher || {}).start || "") : "";
+    return st && ymd(new Date(st)).slice(0, 7) === zeMonat;
+  });
+  const r = { mode: "ze", modeName: "Monatsbericht Arbeitszeit", fahrer: zeName(), kennz: "", zeit: zeMonat, to: zeMail(),
+    bericht: b, korrekturen: korr.length, photos: [], videos: [] };
+  r.subject = `Arbeitszeit ${monatText(zeMonat)} – ${r.fahrer}`;
+  r.text = [`Monatsbericht Arbeitszeit ${monatText(zeMonat)}`, `Mitarbeiter: ${r.fahrer}`, "",
+    `Soll: ${fmtH(s.soll)} h · Gearbeitet: ${fmtH(s.ist)} h · Urlaub/Krank: ${fmtH(s.gut)} h · Saldo: ${fmtH(s.saldo, true)} h`,
+    ...(korr.length ? [`Nachträgliche Änderungen in diesem Monat: ${korr.length} (im PDF markiert)`] : []),
+    "", "Details siehe PDF."].join("\n");
+  lastReport = r;
+  sharePdf(r);
+};
+function buildZePdf(r){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210, M = 12; let y = 18;
+  const s = settings(), b = r.bericht, t = b.sum;
+  doc.addImage(LOGO, "PNG", W - M - 50, 9, 50, 50 * 111 / 800);
+  doc.setFont("helvetica","bold"); doc.setFontSize(15); doc.text("Arbeitszeit " + monatText(b.monat), M, y); y += 6;
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(90); doc.text(s.firma + " · " + r.fahrer, M, y); doc.setTextColor(0); y += 8;
+  doc.setFontSize(10);
+  doc.text(`Soll: ${fmtH(t.soll)} h   Gearbeitet: ${fmtH(t.ist)} h   Urlaub/Krank: ${fmtH(t.gut)} h   Saldo: ${fmtH(t.saldo, true)} h`, M, y); y += 7;
+  const cols = [[M, "Datum"], [M + 24, "Zeiten"], [M + 92, "Ist"], [M + 106, "Soll"], [M + 120, "Saldo"], [M + 136, "Abwesenheit / Hinweise"]];
+  const kopf = () => { doc.setFont("helvetica","bold"); doc.setFontSize(8.5); cols.forEach(([x, h]) => doc.text(h, x, y)); doc.setDrawColor(180); doc.line(M, y + 1.5, W - M, y + 1.5); y += 5; doc.setFont("helvetica","normal"); };
+  kopf();
+  b.tage.forEach(d => {
+    const zeiten = d.eintraege.map(e => `${hm(e.start)}–${e.end ? hm(e.end) : "läuft"}${e.pause ? ` (P ${e.pause})` : ""}${e.source === "nachgetragen" ? " N" : e.geaendert ? " G" : ""}`).join(", ");
+    const zz = doc.splitTextToSize(zeiten || "", 66);
+    const info = doc.splitTextToSize([d.feiertag, d.abw, ...d.hinweise].filter(Boolean).join("; "), W - M - (M + 136));
+    const h = Math.max(1, zz.length, info.length) * 3.8 + 1;
+    if(y + h > 280){ doc.addPage(); y = 16; kopf(); }
+    if(d.wt >= 6 || d.feiertag){ doc.setFillColor(243, 245, 248); doc.rect(M, y - 3, W - 2*M, h, "F"); }
+    doc.text(`${WT[d.wt]} ${fmtIso(d.date).slice(0, 6)}`, M, y);
+    doc.text(zz, M + 24, y);
+    doc.text(d.ist ? fmtH(d.ist) : "", M + 92, y);
+    doc.text(d.soll ? fmtH(d.soll) : "", M + 106, y);
+    if(d.saldo){ doc.setTextColor(...(d.saldo < 0 ? [198,40,40] : [30,142,74])); doc.text(fmtH(d.saldo, true), M + 120, y); doc.setTextColor(0); }
+    if(d.hinweise.length) doc.setTextColor(176, 125, 0);
+    doc.text(info, M + 136, y); doc.setTextColor(0);
+    y += h;
+  });
+  y += 4; doc.setFontSize(8); doc.setTextColor(90);
+  doc.text("N = nachgetragen, G = nachträglich geändert, P = Pause in Minuten." + (r.korrekturen ? ` Änderungen im Monat: ${r.korrekturen}.` : ""), M, Math.min(y, 285));
+  const pages = doc.getNumberOfPages();
+  for(let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(`${r.fahrer} · ${monatText(b.monat)} · Seite ${i}/${pages}`, W/2, 292, { align: "center" }); }
+  return doc;
+}
+$("#zeCsv").onclick = () => {
+  const zelle = v => { const s = v == null ? "" : String(v); const sicher = /^[=+\-@\t\r]/.test(s) ? "'" + s : s; return /[;"\n\r]/.test(sicher) ? `"${sicher.replace(/"/g, '""')}"` : sicher; };
+  const h = m => (m / 60).toFixed(2).replace(".", ",");
+  const b = zeMonatsbericht(zeMonat);
+  const zeilen = [["Name","Datum","Tag","Soll (h)","Ist (h)","Gutschrift (h)","Saldo (h)","Abwesenheit","Feiertag","Hinweise"],
+    ...b.tage.map(d => [zeName(), d.date, WT[d.wt], h(d.soll), h(d.ist), h(d.gut), h(d.saldo), d.abw || "", d.feiertag || "", d.hinweise.join(", ")])];
+  dateiSpeichern("﻿" + zeilen.map(z => z.map(zelle).join(";")).join("\r\n"), `Arbeitszeit_${zeMonat}.csv`, "text/csv");
+};
+
+/* Urlaub & Krankmeldung */
+$("#zeJahrPrev").onclick = () => { zeJahr--; zeRender(); };
+$("#zeJahrNext").onclick = () => { zeJahr++; zeRender(); };
+function zeRenderAbw(){
+  const k = zeKonto(zeJahr), z = n => String(n).replace(".", ",");
+  $("#zeJahrLabel").textContent = "Urlaub " + zeJahr;
+  $("#zeKonto").innerHTML = `<div><b>${z(k.anspruch)}</b><span>Anspruch</span></div><div><b>${z(k.genommen)}</b><span>Genommen</span></div>
+    <div><b>${z(k.beantragt)}</b><span>Beantragt</span></div><div><b class="pos">${z(k.verfuegbar)}</b><span>Verfügbar</span></div>`;
+  const liste = zeDaten().absences.filter(a => a.start.slice(0, 4) === String(zeJahr)).sort((p, q) => q.start.localeCompare(p.start));
+  $("#zeAbwListe").innerHTML = !liste.length ? '<p class="hint" style="margin:0">Noch keine Einträge.</p>' : liste.map(a => `<div class="ze-tag">
+    <div class="kopf"><span><span class="tag ${a.type === "krank" ? (a.au ? "au" : "bad") : "ok"}">${abwText(a)}</span></span>
+      <span class="tag ${a.status === "genehmigt" || a.status === "gemeldet" ? "ok" : a.status === "beantragt" ? "warn" : "na"}">${statusText(a)}</span></div>
+    <div style="margin-top:4px">${fmtIso(a.start)}${a.end !== a.start ? " – " + fmtIso(a.end) : ""} · ${fmtTage(a.days)}${a.half ? " (halber Tag)" : ""}</div>
+    ${a.comment ? `<div class="hint">„${esc(a.comment)}“</div>` : ""}
+    <div class="row" style="margin-top:6px">${a.status === "beantragt" ? `
+      <button type="button" class="btn sec small" data-abw="${a.id}" data-st="genehmigt">✓ Wurde genehmigt</button>
+      <button type="button" class="btn sec small" data-abw="${a.id}" data-st="abgelehnt">✗ Wurde abgelehnt</button>
+      <button type="button" class="btn sec small" data-abw="${a.id}" data-st="storniert">Zurückziehen</button>` : ""}
+      ${a.type === "krank" && !a.au && a.status === "gemeldet" ? `<button type="button" class="btn sec small" data-abw="${a.id}" data-st="au">AU nachreichen</button>` : ""}</div>
+  </div>`).join("");
+  $("#zeAbwListe").querySelectorAll("[data-abw]").forEach(b => b.onclick = () => zeAbwStatus(b.dataset.abw, b.dataset.st));
+}
+function zeAbwStatus(id, st){
+  const d = zeDaten(), a = d.absences.find(x => x.id === id);
+  if(!a) return;
+  const zeitraum = fmtIso(a.start) + (a.end !== a.start ? "–" + fmtIso(a.end) : "");
+  if(st === "storniert"){
+    if(!confirm("Antrag zurückziehen? Das Büro wird per E-Mail informiert.")) return;
+    a.status = "storniert";
+    zeSpeichernDaten(d, "Antrag zurückgezogen", { id });
+    location.href = mailtoUrl({ to: zeMail(), subject: `${abwText(a)} zurückgezogen – ${zeName()} – ${zeitraum}` },
+      `Hallo,\n\nich ziehe meinen Antrag auf ${abwText(a)} vom ${zeitraum} (${fmtTage(a.days)}) zurück.\n\nViele Grüße\n${zeName()}`);
+  } else if(st === "au"){
+    a.au = true;
+    zeSpeichernDaten(d, "AU nachgereicht", { id });
+    location.href = mailtoUrl({ to: zeMail(), subject: `AU nachgereicht – ${zeName()} – ${zeitraum}` },
+      `Hallo,\n\nfür meine Krankmeldung vom ${zeitraum} liegt jetzt eine Arbeitsunfähigkeitsbescheinigung (AU) vor. Ich reiche sie im Original nach.\n\nViele Grüße\n${zeName()}`);
+  } else {
+    a.status = st;
+    zeSpeichernDaten(d, "Status " + st, { id });
+    toast(st === "genehmigt" ? "Als genehmigt eingetragen" : "Als abgelehnt eingetragen");
+  }
+  zeRender();
+}
+
+let zeAbwArt = "urlaub", zeAu = true;
+document.querySelectorAll("[data-zeabs]").forEach(b => b.onclick = () => zeAbwNeu(b.dataset.zeabs));
+function zeAbwNeu(art){
+  if(!zeName()){ zeZeigen("uhr"); toast("Bitte zuerst deinen Namen eintragen"); return; }
+  zeAbwArt = art; zeAu = true;
+  const krank = art === "krank";
+  $("#zeaUrlaub").classList.toggle("hidden", krank);
+  $("#zeaKrank").classList.toggle("hidden", !krank);
+  $("#zeaHalbWrap").classList.toggle("hidden", krank);
+  $("#zeaKommentarWrap").classList.toggle("hidden", krank);   // bei Krankheit keine Freitexte (Datenschutz)
+  $("#zea-bis-l").textContent = krank ? "Bis (voraussichtlich)" : "Bis";
+  $("#zea-von").value = $("#zea-bis").value = isoHeute();
+  $("#zea-halb").checked = false; $("#zea-kommentar").value = "";
+  zeAbwAuswahl();
+  show("s-ze-abs");
+  $("#title").textContent = krank ? "Krankmeldung" : "Urlaub beantragen";
+  $("#btnSubmit").textContent = krank ? "Krankmeldung per E-Mail senden" : "Antrag per E-Mail senden";
+}
+function zeAbwAuswahl(){
+  document.querySelectorAll("[data-zeart]").forEach(b => b.className = b.dataset.zeart === zeAbwArt ? "on ok" : "");
+  document.querySelectorAll("[data-zeau]").forEach(b => b.className = (b.dataset.zeau === "1") === zeAu ? "on ok" : "");
+  zeAbwTage();
+}
+document.querySelectorAll("[data-zeart]").forEach(b => b.onclick = () => { zeAbwArt = b.dataset.zeart; zeAbwAuswahl(); });
+document.querySelectorAll("[data-zeau]").forEach(b => b.onclick = () => { zeAu = b.dataset.zeau === "1"; zeAbwAuswahl(); });
+$("#zea-von").onchange = () => { if($("#zea-bis").value < $("#zea-von").value) $("#zea-bis").value = $("#zea-von").value; zeAbwTage(); };
+$("#zea-bis").onchange = zeAbwTage;
+$("#zea-halb").onchange = zeAbwTage;
+function zeAbwTageZahl(){
+  const von = $("#zea-von").value, bis = $("#zea-bis").value;
+  if(!von || !bis || bis < von) return 0;
+  const n = arbeitstageZaehlen(von, bis);
+  return $("#zea-halb").checked && von === bis && zeAbwArt !== "krank" ? Math.min(n, 0.5) : n;
+}
+function zeAbwTage(){
+  const n = zeAbwTageZahl();
+  $("#zeaTage").textContent = n ? `${fmtTage(n)} (Arbeitstage ohne Feiertage)` + (zeAbwArt === "urlaub" ? ` · verfügbar: ${String(zeKonto(+$("#zea-von").value.slice(0, 4)).verfuegbar).replace(".", ",")}` : "") : "Im Zeitraum liegen keine Arbeitstage.";
+}
+function zeAbwSenden(){
+  const von = $("#zea-von").value, bis = $("#zea-bis").value, krank = zeAbwArt === "krank";
+  if(!von || !bis) return toast("Bitte Zeitraum angeben");
+  if(bis < von) return toast("Das Ende liegt vor dem Beginn");
+  const halb = !krank && $("#zea-halb").checked;
+  if(halb && von !== bis) return toast("Halber Tag nur bei einem einzelnen Tag möglich");
+  const tage = zeAbwTageZahl();
+  if(!tage) return toast("Im Zeitraum liegen keine Arbeitstage");
+  const d = zeDaten();
+  if(d.absences.some(a => !["storniert", "abgelehnt"].includes(a.status) && a.start <= bis && a.end >= von))
+    return toast("Überschneidet sich mit einem vorhandenen Eintrag");
+  if(zeAbwArt === "urlaub" && tage > zeKonto(+von.slice(0, 4)).verfuegbar) return toast("Nicht genug Resturlaub verfügbar");
+  const a = { id: "a" + Date.now(), type: zeAbwArt, au: krank ? zeAu : false, start: von, end: bis, half: halb, days: tage,
+    comment: krank ? "" : $("#zea-kommentar").value.trim(), status: krank ? "gemeldet" : "beantragt", erstellt: new Date().toISOString() };
+  d.absences.push(a);
+  zeSpeichernDaten(d, krank ? "Krankmeldung" : "Urlaubsantrag", { id: a.id });
+  const zeitraum = fmtIso(von) + (bis !== von ? " – " + fmtIso(bis) : "");
+  const betreff = krank ? `Krankmeldung – ${zeName()} – ${zeitraum}` : `${abwText(a)}santrag – ${zeName()} – ${zeitraum} (${fmtTage(tage)})`;
+  const text = krank
+    ? `Hallo,\n\nich melde mich krank.\n\nZeitraum: ${zeitraum} (voraussichtlich)\nArbeitstage: ${fmtTage(tage)}\nVermerk: ${zeAu ? "Krank mit AU – die Bescheinigung reiche ich nach." : "Krank ohne AU"}\n\nViele Grüße\n${zeName()}`
+    : `Hallo,\n\nich beantrage ${zeAbwArt === "urlaub" ? "Erholungsurlaub" : "Sonderurlaub"}.\n\nZeitraum: ${zeitraum}${halb ? " (halber Tag)" : ""}\nArbeitstage: ${fmtTage(tage)}\n` +
+      (zeAbwArt === "urlaub" ? `Resturlaub danach: ${String(zeKonto(+von.slice(0, 4)).verfuegbar).replace(".", ",")} Tage\n` : "") +
+      (a.comment ? `Kommentar: ${a.comment}\n` : "") + `\nBitte um Rückmeldung, ob der Antrag genehmigt ist.\n\nViele Grüße\n${zeName()}`;
+  toast(krank ? "Krankmeldung erfasst – gute Besserung!" : "Antrag erfasst");
+  zeZeigen("abw");
+  location.href = mailtoUrl({ to: zeMail(), subject: betreff }, text);
+}
+
+/* Meine Daten (Auskunft wie in der Server-Zeiterfassung) */
+$("#zeExport").onclick = () => dateiSpeichern(JSON.stringify(Object.assign({ format: "zeiterfassung-app", name: zeName(), stand: new Date().toISOString(),
+  vorgaben: zeCfg() }, zeDaten()), null, 1), `Zeiterfassung_${zeName().replace(/\W+/g, "_") || "Daten"}_${isoHeute()}.json`, "application/json");
+
+/* Vorgaben in den Admin-Einstellungen */
+function zeVorgabenAnzeigen(){
+  const c = zeCfg();
+  $("#zc-std").value = c.std; $("#zc-urlaub").value = c.urlaub; $("#zc-beginn").value = c.beginn || ""; $("#zc-land").value = c.land; $("#zc-mail").value = c.mail;
+  $("#zc-tage").innerHTML = [1, 2, 3, 4, 5, 6, 7].map(t => `<label>${WT[t]}<input type="checkbox" value="${t}" ${c.tage.includes(t) ? "checked" : ""}></label>`).join("");
+}
+$("#zcSpeichern").onclick = () => {
+  const std = Number($("#zc-std").value), urlaub = Number($("#zc-urlaub").value), mail = $("#zc-mail").value.trim();
+  const tage = [...document.querySelectorAll("#zc-tage input:checked")].map(i => +i.value);
+  if(!(std > 0 && std <= 60)) return toast("Wochenstunden zwischen 1 und 60");
+  if(!(urlaub >= 0 && urlaub <= 60)) return toast("Urlaubstage zwischen 0 und 60");
+  if(!tage.length) return toast("Mindestens einen Arbeitstag wählen");
+  if(mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return toast("Bitte gültige E-Mail-Adresse eingeben");
+  store.set("zeCfg", Object.assign(zeCfg(), { std, urlaub, tage, beginn: $("#zc-beginn").value || null, land: $("#zc-land").value, mail }));
+  Object.keys(feiertagCache).forEach(k => delete feiertagCache[k]);
+  toast("Vorgaben gespeichert");
+};
+
+/* ---------- ToDo (lokal, Vergabe an Kollegen per E-Mail) ---------- */
+const PRIO_TEXT = { 1: "Höchste", 2: "Hoch", 3: "Normal", 4: "Niedrigste" };
+const TODO_KOLLEGEN_START = ["Matthias Wagner", "Alexander Starnowski", "Patrick Scheifling", "Michael Tomic"].map(name => ({ name, mail: "" }));
+const todoDaten = () => store.get("todos", []);
+const todoSpeichernDaten = l => store.set("todos", l);
+const todoKollegen = () => store.get("todoKollegen", TODO_KOLLEGEN_START);
+let todoTab = "mine", todoEditId = null;
+
+// Sortierung wie im Original: offene zuerst, dann Priorität, dann Fälligkeit (ohne Datum zuletzt), dann Anlage
+function todoSortiert(l){
+  return l.slice().sort((a, b) => (a.status === "erledigt") - (b.status === "erledigt") || a.prio - b.prio ||
+    (!a.due) - (!b.due) || (a.due || "").localeCompare(b.due || "") || a.created.localeCompare(b.created));
+}
+function renderTodoStatus(){
+  const offen = todoDaten().filter(t => t.status === "offen" && !t.an), heute = ymd(new Date());
+  const ueber = offen.filter(t => t.due && t.due < heute).length;
+  $("#todoStatus").innerHTML = !offen.length ? "Aufgaben erfassen, priorisieren und vergeben"
+    : `${offen.length} offen` + (ueber ? ` · <span style="color:var(--bad);font-weight:600">${ueber} überfällig</span>` : "");
+}
+
+$("#goTodo").onclick = () => todoZeigen("mine");
+function todoZeigen(tab){
+  show("s-todo");
+  todoTab = tab || todoTab;
+  document.querySelectorAll("#todoTabs button").forEach(b => b.classList.toggle("on", b.dataset.todotab === todoTab));
+  todoRender();
+}
+document.querySelectorAll("#todoTabs button").forEach(b => b.onclick = () => todoZeigen(b.dataset.todotab));
+$("#todoErledigt").onchange = () => todoRender();
+
+function todoRender(){
+  const heute = ymd(new Date()), alle = $("#todoErledigt").checked;
+  const l = todoSortiert(todoDaten().filter(t => (todoTab === "mine" ? !t.an : !!t.an) && (alle || t.status === "offen")));
+  const w = $("#todoListe");
+  if(!l.length){
+    w.innerHTML = `<p class="hint" style="margin:0">${todoTab === "mine" ? "Keine offenen ToDos – alles erledigt." : "Du hast noch keine ToDos an andere vergeben."}</p>`;
+    return;
+  }
+  w.innerHTML = l.map(t => {
+    const done = t.status === "erledigt", ueber = !done && t.due && t.due < heute;
+    return `<div class="todo p${t.prio}${done ? " done" : ""}">
+      <input type="checkbox" data-done="${t.id}" ${done ? "checked" : ""} aria-label="${done ? "Wieder öffnen" : "Als erledigt markieren"}">
+      <div class="grow">
+        <div class="titel"><span class="prio p${t.prio}" title="Priorität ${PRIO_TEXT[t.prio]}">${t.prio}</span>${esc(t.title)}${t.chef ? ' <span class="tag chef">Vom Chef</span>' : ""}</div>
+        ${t.desc ? `<div class="desc">${esc(t.desc)}</div>` : ""}
+        <div class="meta">
+          ${t.an ? `<span>Zugewiesen an: ${esc(t.an.name)}</span>` : ""}
+          ${t.due ? `<span class="${ueber ? "ueber" : ""}">Fällig: ${fmtIso(t.due)}${ueber ? " (überfällig)" : ""}</span>` : ""}
+          <span>Erstellt: ${fmtIso(t.created.slice(0, 10))}</span>
+          ${done && t.doneAt ? `<span>Erledigt: ${fmtIso(t.doneAt.slice(0, 10))}</span>` : ""}
+        </div>
+      </div>
+      <button type="button" class="btn sec small" data-edit="${t.id}">Bearbeiten</button>
+    </div>`;
+  }).join("");
+  w.querySelectorAll("[data-done]").forEach(c => c.onchange = () => {
+    const d = todoDaten(), t = d.find(x => x.id === c.dataset.done);
+    t.status = c.checked ? "erledigt" : "offen";
+    t.doneAt = c.checked ? new Date().toISOString() : null;
+    todoSpeichernDaten(d);
+    if(c.checked) toast("Erledigt ✓");
+    todoRender();
+  });
+  w.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => todoBearbeiten(b.dataset.edit));
+}
+
+$("#todoNeu").onclick = () => todoBearbeiten(null);
+function todoBearbeiten(id){
+  const t = id ? todoDaten().find(x => x.id === id) : null;
+  todoEditId = id;
+  $("#td-titel").value = t ? t.title : "";
+  $("#td-prio").value = t ? t.prio : 3;
+  $("#td-faellig").value = t ? t.due || "" : "";
+  $("#td-text").value = t ? t.desc : "";
+  const kol = todoKollegen().filter(k => k.name.trim());
+  $("#td-an").innerHTML = `<option value="">${esc(zeName() || "Ich")} (ich)</option>` +
+    kol.map((k, i) => `<option value="${i}"${t && t.an && t.an.name === k.name ? " selected" : ""}>${esc(k.name)}${k.mail ? "" : " – keine E-Mail hinterlegt"}</option>`).join("");
+  if(t && t.an && !kol.some(k => k.name === t.an.name)) $("#td-an").insertAdjacentHTML("beforeend", `<option value="alt" selected>${esc(t.an.name)}</option>`);
+  todoAnHinweis();
+  $("#tdLoeschen").classList.toggle("hidden", !t);
+  show("s-todo-edit");
+  $("#title").textContent = t ? "ToDo bearbeiten" : "Neues ToDo";
+  $("#btnSubmit").textContent = "Speichern";
+  if(!t) setTimeout(() => $("#td-titel").focus(), 100);
+}
+$("#td-an").onchange = todoAnHinweis;
+function todoAnHinweis(){
+  $("#td-an-hint").textContent = $("#td-an").value === "" ? ""
+    : "Beim Speichern öffnet sich die Mail-App mit dem ToDo für diese Person." + (store.get("todoChef", false) ? " Markierung: „Vom Chef“." : "");
+  $("#btnSubmit").textContent = $("#td-an").value === "" ? "Speichern" : "Speichern & per E-Mail vergeben";
+}
+function todoSpeichern(){
+  const title = $("#td-titel").value.trim();
+  if(!title) return toast("Titel darf nicht leer sein");
+  const wahl = $("#td-an").value, d = todoDaten(), alt = todoEditId ? d.find(x => x.id === todoEditId) : null;
+  let an = null;
+  if(wahl === "alt") an = alt.an;
+  else if(wahl !== ""){
+    const k = todoKollegen().filter(x => x.name.trim())[+wahl];
+    if(!k.mail) return toast(`Für ${k.name} ist keine E-Mail-Adresse hinterlegt (⚙ Einstellungen)`);
+    an = { name: k.name, mail: k.mail };
+  }
+  const t = alt || { id: "t" + Date.now(), status: "offen", created: new Date().toISOString(), doneAt: null };
+  const neuVergeben = an && (!alt || !alt.an || alt.an.name !== an.name ||
+    alt.title !== title || alt.prio !== +$("#td-prio").value || (alt.due || "") !== $("#td-faellig").value || alt.desc !== $("#td-text").value.trim());
+  Object.assign(t, { title, prio: +$("#td-prio").value, due: $("#td-faellig").value || null, desc: $("#td-text").value.trim(), an,
+    chef: an ? store.get("todoChef", false) : false });
+  if(!alt) d.push(t);
+  todoSpeichernDaten(d);
+  todoZeigen(an ? "vergeben" : "mine");
+  if(neuVergeben){
+    const geaendert = alt && alt.an && alt.an.name === an.name;
+    const betreff = (t.chef ? "[Vom Chef] " : "") + (geaendert ? "ToDo geändert: " : "Neues ToDo: ") + title + ` (Priorität ${t.prio} – ${PRIO_TEXT[t.prio]})`;
+    const text = [`Hallo ${an.name.split(" ")[0]},`, "", geaendert ? "folgendes ToDo wurde geändert:" : "ich habe dir folgendes ToDo zugewiesen:", "",
+      `Titel: ${title}`, `Priorität: ${t.prio} – ${PRIO_TEXT[t.prio]}`, ...(t.due ? [`Fällig am: ${fmtIso(t.due)}`] : []),
+      ...(t.desc ? ["", "Beschreibung:", t.desc] : []), "", "Bitte gib mir Bescheid, wenn es erledigt ist.", "", "Viele Grüße", zeName() || ""].join("\n");
+    toast("ToDo gespeichert – Mail wird geöffnet");
+    location.href = mailtoUrl({ to: an.mail, subject: betreff }, text);
+  } else toast("Gespeichert");
+}
+$("#tdLoeschen").onclick = () => {
+  const d = todoDaten(), t = d.find(x => x.id === todoEditId);
+  if(!t || !confirm(`ToDo „${t.title}“ wirklich löschen?`)) return;
+  todoSpeichernDaten(d.filter(x => x.id !== todoEditId));
+  toast("Gelöscht");
+  todoZeigen();
+};
+
+/* Kollegen in den Admin-Einstellungen */
+function todoKollegenAnzeigen(liste){
+  const l = liste || todoKollegen();
+  $("#tk-liste").innerHTML = l.map((k, i) => `<div class="tk-zeile">
+    <input class="tk-name" placeholder="Name" value="${esc(k.name)}">
+    <input class="tk-mail" type="email" placeholder="E-Mail" value="${esc(k.mail)}">
+    <button type="button" class="btn sec small" data-tkdel="${i}" aria-label="Entfernen">×</button></div>`).join("");
+  $("#tk-liste").querySelectorAll("[data-tkdel]").forEach(b => b.onclick = () => {
+    const akt = tkLesen(); akt.splice(+b.dataset.tkdel, 1); todoKollegenAnzeigen(akt);
+  });
+  $("#tk-chef").checked = store.get("todoChef", false);
+}
+const tkLesen = () => [...document.querySelectorAll("#tk-liste .tk-zeile")].map(z => ({ name: z.querySelector(".tk-name").value.trim(), mail: z.querySelector(".tk-mail").value.trim() }));
+$("#tkNeu").onclick = () => { const l = tkLesen(); l.push({ name: "", mail: "" }); todoKollegenAnzeigen(l); };
+$("#tkSpeichern").onclick = () => {
+  const l = tkLesen().filter(k => k.name || k.mail);
+  const falsch = l.find(k => k.mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(k.mail));
+  if(falsch) return toast(`Ungültige E-Mail bei ${falsch.name || "einem Eintrag"}`);
+  if(l.some(k => !k.name)) return toast("Bitte bei jedem Eintrag einen Namen angeben");
+  store.set("todoKollegen", l);
+  store.set("todoChef", $("#tk-chef").checked);
+  todoKollegenAnzeigen();
+  toast("Kollegen gespeichert");
+};
+
+/* ---------- Fristenwächter (passwortgeschützt) ---------- */
+// Passwort wird nur als SHA-256-Prüfwert gespeichert; Standard: Start2026!
+const FW_SALT = "fahrer-app-fw:";
+const FW_STANDARD_HASH = "ab8c87519c01e9b486c112dd058e6b503b17a148059d8b4bd13706ce50f54c4d";
+const FW_FAHRZEUG = ["HU / TÜV / Contrôle technique", "SP Sicherheitsprüfung (LKW/Anh.)", "Tachograph-Prüfung (LKW)",
+  "Versicherung", "Leasingende", "UVV-Prüfung", "Feuerlöscher-Prüfung", "Wartung / Inspektion"];
+const FW_FAHRER = ["Führerschein (Dokument)", "Führerschein Klasse C/CE", "Personalausweis", "Fahrerqualifizierung (Code 95)",
+  "Gefahrgutschein (ADR)", "Fahrerkarte (Tacho)", "Führerscheinkontrolle", "Aufenthaltstitel", "Reisepass"];
+const FW_TYPEN = ["PKW", "LKW", "Anhänger", "Sonstiges"];
+const WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+let fwTab = "uebersicht", fwEdit = null;
+
+async function fwHash(pw){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(FW_SALT + pw));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+const fwDaten = () => Object.assign({ fahrzeuge: [], fahrer: [], vorlauf: 3, tag: 1 }, store.get("fristen", {}));
+function fwSpeichernDaten(d){ store.set("fristen", d); syncFwReminder(); }
+
+// Datumshilfen (ISO "JJJJ-MM-TT", lokale Zeit)
+const isoHeute = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); };
+function isoPlusMonate(iso, m){ const [y, mo, t] = iso.split("-").map(Number); const d = new Date(y, mo - 1 + m, t);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+const tageBis = iso => Math.round((Date.parse(iso + "T00:00:00Z") - Date.parse(isoHeute() + "T00:00:00Z")) / 86400000);
+const fmtIso = iso => iso.split("-").reverse().join(".");
+// 0 = gültig, 1 = läuft innerhalb der Vorlaufzeit ab, 2 = abgelaufen
+function fwStatus(iso, vorlauf){ const h = isoHeute(); return iso < h ? 2 : iso <= isoPlusMonate(h, vorlauf) ? 1 : 0; }
+const fwStatusText = st => st === 2 ? "ABGELAUFEN" : st === 1 ? "läuft bald ab" : "ok";
+const fwName = (typ, o) => typ === "fz" ? `${o.kennzeichen} (${o.typ})` : `${o.nachname}, ${o.vorname}`;
+
+function fwListe(d, alle){
+  const l = [];
+  const add = (kat, typ, o) => Object.entries(o.fristen || {}).forEach(([art, iso]) => {
+    if(!iso) return;
+    const st = fwStatus(iso, d.vorlauf);
+    if(alle || st > 0) l.push({ kat, obj: fwName(typ, o), art, iso, tage: tageBis(iso), st });
+  });
+  d.fahrzeuge.forEach(o => add("Fahrzeug", "fz", o));
+  d.fahrer.forEach(o => add("Fahrer", "fa", o));
+  return l.sort((a, b) => a.iso.localeCompare(b.iso));
+}
+
+/* Anzeige auf der Startseite (nur wenn auf diesem Handy Fristen gepflegt werden) */
+function renderFwStatus(){
+  const d = fwDaten(), l = fwListe(d, false), n = d.fahrzeuge.length + d.fahrer.length;
+  $("#fwStatus").innerHTML = !n ? "Ablaufdaten Fuhrpark – nur mit Passwort"
+    : l.length ? `<span style="color:var(--bad);font-weight:600">⚠ ${l.length} Frist(en) fällig</span>`
+    : `<span style="color:var(--ok);font-weight:600">✓ Keine Frist fällig</span>`;
+}
+
+/* Anmeldung */
+$("#goFw").onclick = () => { $("#fw-pw").value = ""; $("#fwLoginMsg").textContent = ""; show("s-fw-login"); setTimeout(() => $("#fw-pw").focus(), 100); };
+$("#fw-pw").addEventListener("keydown", e => { if(e.key === "Enter") $("#fwLoginBtn").click(); });
+$("#fwLoginBtn").onclick = async () => {
+  const sperre = store.get("fwSperre", { fehl: 0, bis: 0 });
+  if(Date.now() < sperre.bis){ $("#fwLoginMsg").textContent = `Zu viele Fehlversuche – bitte in ${Math.ceil((sperre.bis - Date.now()) / 60000)} Min. erneut versuchen.`; return; }
+  let ok = false;
+  try{ ok = (await fwHash($("#fw-pw").value)) === store.get("fwPwHash", FW_STANDARD_HASH); }
+  catch(e){ $("#fwLoginMsg").textContent = "Anmeldung auf diesem Gerät nicht möglich."; return; }
+  if(!ok){
+    sperre.fehl++;
+    if(sperre.fehl >= 5){ sperre.bis = Date.now() + 5 * 60000; sperre.fehl = 0; }
+    store.set("fwSperre", sperre);
+    $("#fwLoginMsg").textContent = sperre.bis > Date.now() ? "Zu viele Fehlversuche – 5 Minuten gesperrt." : "Falsches Passwort.";
+    return;
+  }
+  store.del("fwSperre");
+  $("#fw-pw").value = "";
+  fwSession = true;
+  fwZeigen("uebersicht");
+};
+function fwZeigen(tab){
+  if(!fwSession){ $("#goFw").click(); return; }
+  show("s-fw");
+  fwTab = tab || fwTab;
+  document.querySelectorAll("#fwTabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === fwTab));
+  document.querySelectorAll("#s-fw [data-pane]").forEach(p => p.classList.toggle("hidden", p.dataset.pane !== fwTab));
+  fwRender();
+}
+document.querySelectorAll("#fwTabs button").forEach(b => b.onclick = () => fwZeigen(b.dataset.tab));
+$("#fwLogout").onclick = () => show("s-start");
+// Nach 5 Minuten im Hintergrund automatisch abmelden
+let fwVersteckt = 0;
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden){ fwVersteckt = Date.now(); return; }
+  if(cur.startsWith("s-fw") && cur !== "s-fw-login" && Date.now() - fwVersteckt > 5 * 60000){ show("s-start"); toast("Fristenwächter: automatisch abgemeldet"); }
+});
+
+/* Listen */
+function fwRender(){
+  const d = fwDaten();
+  if(fwTab === "uebersicht"){
+    const faellig = fwListe(d, false), abg = faellig.filter(f => f.st === 2).length;
+    const s = $("#fwSumme");
+    s.textContent = !faellig.length ? `Alles in Ordnung – keine Frist läuft in den nächsten ${d.vorlauf} Monaten ab.`
+      : `${faellig.length} Frist(en) laufen in den nächsten ${d.vorlauf} Monaten ab, davon ${abg} bereits abgelaufen.`;
+    s.style.color = abg ? "var(--bad)" : faellig.length ? "#b07d00" : "var(--ok)";
+    const l = $("#fwAlle").checked ? fwListe(d, true) : faellig;
+    $("#fwListe").innerHTML = !l.length ? '<p class="hint">Keine Einträge.</p>' : l.map(f => `<div class="fw-row">
+      <span class="dot st${f.st}"></span>
+      <div class="grow"><b>${esc(f.obj)}</b><br><span class="hint">${esc(f.kat)} · ${esc(f.art)}</span></div>
+      <div class="dat">${fmtIso(f.iso)}<br><span class="hint">${f.tage < 0 ? "seit " + (-f.tage) + " Tagen abgelaufen" : "noch " + f.tage + " Tage"}</span></div></div>`).join("");
+  }
+  if(fwTab === "fahrzeuge" || fwTab === "fahrer"){
+    const fz = fwTab === "fahrzeuge", typ = fz ? "fz" : "fa";
+    const q = $(fz ? "#fwSucheFz" : "#fwSucheFa").value.trim().toLowerCase();
+    const liste = (fz ? d.fahrzeuge.slice().sort((a, b) => a.kennzeichen.localeCompare(b.kennzeichen))
+                      : d.fahrer.slice().sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname)))
+      .filter(o => !q || (fz ? [o.kennzeichen, o.typ, o.modell] : [o.nachname, o.vorname, o.pnr]).join(" ").toLowerCase().includes(q));
+    const w = $(fz ? "#fwListeFz" : "#fwListeFa");
+    w.innerHTML = liste.length ? "" : `<p class="hint" style="margin:0">${q ? "Nichts gefunden." : fz ? "Noch keine Fahrzeuge erfasst." : "Noch keine Fahrer erfasst."}</p>`;
+    liste.forEach(o => {
+      const st = Object.values(o.fristen || {}).filter(Boolean).map(iso => fwStatus(iso, d.vorlauf));
+      const n2 = st.filter(x => x === 2).length, n1 = st.filter(x => x === 1).length;
+      const b = document.createElement("button"); b.type = "button"; b.className = "fw-item";
+      b.innerHTML = `<b>${esc(fz ? o.kennzeichen : o.nachname + ", " + o.vorname)}</b>
+        <span class="hint">${esc(fz ? o.typ + (o.modell ? " · " + o.modell : "") : (o.pnr ? "Pers.-Nr. " + o.pnr : ""))}</span><br>
+        ${n2 ? `<span class="tag bad">${n2} abgelaufen</span> ` : ""}${n1 ? `<span class="tag warn">${n1} bald fällig</span> ` : ""}
+        ${!n1 && !n2 ? `<span class="tag ok">${st.length ? "alles gültig" : "keine Fristen"}</span>` : ""}`;
+      b.onclick = () => fwBearbeiten(typ, o);
+      w.appendChild(b);
+    });
+  }
+  if(fwTab === "einst"){
+    $("#fwVorlauf").innerHTML = Array.from({ length: 24 }, (_, i) => `<option value="${i+1}">${i+1} Monat${i ? "e" : ""}</option>`).join("");
+    $("#fwVorlauf").value = d.vorlauf;
+    $("#fwTag").innerHTML = WOCHENTAGE.map((t, i) => `<option value="${i+1}">${t}</option>`).join("");
+    $("#fwTag").value = d.tag;
+  }
+}
+$("#fwAlle").onchange = fwRender;
+$("#fwSucheFz").oninput = fwRender;
+$("#fwSucheFa").oninput = fwRender;
+
+/* Bearbeiten */
+$("#fwNeuFz").onclick = () => fwBearbeiten("fz", null);
+$("#fwNeuFa").onclick = () => fwBearbeiten("fa", null);
+function fwBearbeiten(typ, o){
+  const neu = !o;
+  o = o ? JSON.parse(JSON.stringify(o)) : (typ === "fz"
+    ? { id: "fz" + Date.now(), kennzeichen: "", typ: "LKW", modell: "", notiz: "", fristen: {} }
+    : { id: "fa" + Date.now(), nachname: "", vorname: "", pnr: "", notiz: "", fristen: {} });
+  fwEdit = { typ, o, neu };
+  $("#title").textContent = neu ? (typ === "fz" ? "Neues Fahrzeug" : "Neuer Fahrer") : fwName(typ, o);
+  const feld = (id, label, wert, extra = "") => `<label for="${id}">${label}</label><input id="${id}" value="${esc(wert)}" ${extra}>`;
+  $("#fwEditStamm").innerHTML = typ === "fz"
+    ? feld("fwe-kennz", "Kennzeichen*", o.kennzeichen, 'class="plate" autocapitalize="characters"') +
+      `<label for="fwe-typ">Fahrzeugart</label><select id="fwe-typ">${FW_TYPEN.map(t => `<option${t === o.typ ? " selected" : ""}>${t}</option>`).join("")}</select>` +
+      feld("fwe-modell", "Marke / Modell", o.modell) +
+      `<label for="fwe-notiz">Notiz</label><textarea id="fwe-notiz">${esc(o.notiz)}</textarea>`
+    : feld("fwe-nach", "Nachname*", o.nachname) + feld("fwe-vor", "Vorname", o.vorname) +
+      feld("fwe-pnr", "Personalnummer", o.pnr) +
+      `<label for="fwe-notiz">Notiz</label><textarea id="fwe-notiz">${esc(o.notiz)}</textarea>`;
+  const kz = $("#fwe-kennz");
+  if(kz) kz.addEventListener("input", () => { const p = kz.selectionStart, v = kz.value.toUpperCase(); if(v !== kz.value){ kz.value = v; kz.setSelectionRange(p, p); } });
+  const vorlauf = fwDaten().vorlauf;
+  $("#fwEditFristen").innerHTML = (typ === "fz" ? FW_FAHRZEUG : FW_FAHRER).map((art, i) => {
+    const iso = o.fristen[art] || "";
+    return `<div class="fw-frist${iso ? " st" + fwStatus(iso, vorlauf) : ""}"><label for="fwf-${i}">${esc(art)}</label>
+      <input type="date" id="fwf-${i}" data-art="${esc(art)}" value="${iso}"></div>`;
+  }).join("");
+  $("#fwLoeschen").classList.toggle("hidden", neu);
+  show("s-fw-edit");
+  $("#title").textContent = neu ? (typ === "fz" ? "Neues Fahrzeug" : "Neuer Fahrer") : fwName(typ, o);
+}
+function fwSpeichern(){
+  const { typ, o, neu } = fwEdit, v = id => $("#" + id).value.trim();
+  if(typ === "fz"){
+    if(!v("fwe-kennz")) return toast("Bitte Kennzeichen eintragen");
+    Object.assign(o, { kennzeichen: v("fwe-kennz").toUpperCase(), typ: v("fwe-typ"), modell: v("fwe-modell"), notiz: v("fwe-notiz") });
+  } else {
+    if(!v("fwe-nach")) return toast("Bitte Nachname eintragen");
+    Object.assign(o, { nachname: v("fwe-nach"), vorname: v("fwe-vor"), pnr: v("fwe-pnr"), notiz: v("fwe-notiz") });
+  }
+  o.fristen = {};
+  document.querySelectorAll("#fwEditFristen input[type=date]").forEach(i => { if(i.value) o.fristen[i.dataset.art] = i.value; });
+  const d = fwDaten(), liste = typ === "fz" ? d.fahrzeuge : d.fahrer;
+  const idx = liste.findIndex(x => x.id === o.id);
+  if(idx >= 0) liste[idx] = o; else liste.push(o);
+  fwSpeichernDaten(d);
+  toast("Gespeichert");
+  fwZeigen(typ === "fz" ? "fahrzeuge" : "fahrer");
+}
+$("#fwLoeschen").onclick = () => {
+  const { typ, o } = fwEdit;
+  if(!confirm(`„${fwName(typ, o)}“ wirklich löschen?`)) return;
+  const d = fwDaten();
+  if(typ === "fz") d.fahrzeuge = d.fahrzeuge.filter(x => x.id !== o.id); else d.fahrer = d.fahrer.filter(x => x.id !== o.id);
+  fwSpeichernDaten(d);
+  fwZeigen(typ === "fz" ? "fahrzeuge" : "fahrer");
+};
+
+/* Bericht, CSV, Sicherung */
+$("#fwBericht").onclick = () => {
+  const d = fwDaten(), l = fwListe(d, false);
+  if(!l.length) return toast(`Keine Frist läuft in den nächsten ${d.vorlauf} Monaten ab`);
+  const abg = l.filter(f => f.st === 2).length;
+  const text = [`Fristenwächter Fuhrpark – Stand ${fmtIso(isoHeute())}`, "",
+    `${l.length} Frist(en) sind abgelaufen oder laufen innerhalb von ${d.vorlauf} Monaten ab:`, "",
+    ...l.map(f => `[${fwStatusText(f.st)}] ${f.kat}: ${f.obj} – ${f.art} – ${fmtIso(f.iso)} (${f.tage < 0 ? "seit " + (-f.tage) + " Tagen abgelaufen" : "noch " + f.tage + " Tage"})`)
+  ].join("\n");
+  location.href = mailtoUrl({ subject: `Fristenwächter: ${l.length} Frist(en) fällig` + (abg ? `, ${abg} abgelaufen` : "") }, text);
+};
+function dateiSpeichern(inhalt, name, mime){
+  if(window.Android && Android.saveFile){
+    Android.saveFile(btoa(unescape(encodeURIComponent(inhalt))), name, mime);
+    return;
+  }
+  downloadBlob(new Blob([inhalt], { type: mime }), name);
+}
+$("#fwCsv").onclick = () => {
+  const csv = s => '"' + String(s).replace(/"/g, '""') + '"';
+  const zeilen = ["Status;Kategorie;Fahrzeug / Fahrer;Frist;Ablaufdatum;Tage verbleibend",
+    ...fwListe(fwDaten(), true).map(f => [fwStatusText(f.st), f.kat, csv(f.obj), csv(f.art), fmtIso(f.iso), f.tage].join(";"))];
+  dateiSpeichern("﻿" + zeilen.join("\r\n"), `Fristen_${isoHeute()}.csv`, "text/csv");
+};
+$("#fwExport").onclick = () => dateiSpeichern(JSON.stringify(Object.assign({ format: "fristenwaechter-app", stand: isoHeute() }, fwDaten()), null, 1),
+  `Fristen-Sicherung_${isoHeute()}.json`, "application/json");
+$("#fwImport").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if(!f) return;
+  let neu;
+  try{
+    const text = await f.text();
+    neu = text.trim().startsWith("<") ? fwAusXml(text) : JSON.parse(text);
+    if(!Array.isArray(neu.fahrzeuge) || !Array.isArray(neu.fahrer)) throw new Error();
+  }catch(err){ return toast("Datei konnte nicht gelesen werden"); }
+  const d = fwDaten();
+  if((d.fahrzeuge.length || d.fahrer.length) &&
+     !confirm(`Vorhandene Daten (${d.fahrzeuge.length} Fahrzeuge, ${d.fahrer.length} Fahrer) durch die Datei ersetzen (${neu.fahrzeuge.length} Fahrzeuge, ${neu.fahrer.length} Fahrer)?`)) return;
+  fwSpeichernDaten({ fahrzeuge: neu.fahrzeuge, fahrer: neu.fahrer, vorlauf: +neu.vorlauf || d.vorlauf, tag: +neu.tag || d.tag });
+  toast(`Übernommen: ${neu.fahrzeuge.length} Fahrzeuge, ${neu.fahrer.length} Fahrer`);
+  fwZeigen("uebersicht");
+};
+// Datei "fristen_daten.xml" des Windows-Programms einlesen
+function fwAusXml(text){
+  const x = new DOMParser().parseFromString(text, "application/xml");
+  if(x.getElementsByTagName("parsererror").length) throw new Error("xml");
+  const kind = (el, n) => { const c = [...el.children].find(k => k.tagName === n); return c ? c.textContent.trim() : ""; };
+  const fristen = el => { const r = {}; const fr = [...el.children].find(k => k.tagName === "Fristen");
+    if(fr) [...fr.children].forEach(f => { const art = kind(f, "Art"), dat = kind(f, "Datum").slice(0, 10); if(art && /^\d{4}-\d\d-\d\d$/.test(dat)) r[art] = dat; });
+    return r; };
+  const vorl = x.getElementsByTagName("VorlaufMonate")[0];
+  return {
+    fahrzeuge: [...x.getElementsByTagName("Fahrzeug")].map(el => ({ id: "fz" + kind(el, "Id"), kennzeichen: kind(el, "Kennzeichen"),
+      typ: kind(el, "Typ") || "PKW", modell: kind(el, "Modell"), notiz: kind(el, "Notiz"), fristen: fristen(el) })),
+    fahrer: [...x.getElementsByTagName("Fahrer")].map(el => ({ id: "fa" + kind(el, "Id"), nachname: kind(el, "Nachname"),
+      vorname: kind(el, "Vorname"), pnr: kind(el, "Personalnummer"), notiz: kind(el, "Notiz"), fristen: fristen(el) })),
+    vorlauf: vorl ? +vorl.textContent : 3
+  };
+}
+
+/* Einstellungen & Passwort */
+$("#fwEinstSpeichern").onclick = () => {
+  const d = fwDaten(); d.vorlauf = +$("#fwVorlauf").value; d.tag = +$("#fwTag").value;
+  fwSpeichernDaten(d); toast("Gespeichert");
+};
+$("#fwPwBtn").onclick = async () => {
+  const alt = $("#fwPwAlt").value, neu = $("#fwPwNeu").value, neu2 = $("#fwPwNeu2").value;
+  if((await fwHash(alt)) !== store.get("fwPwHash", FW_STANDARD_HASH)) return toast("Aktuelles Passwort ist falsch");
+  if(neu.length < 8) return toast("Neues Passwort: mindestens 8 Zeichen");
+  if(neu !== neu2) return toast("Die neuen Passwörter stimmen nicht überein");
+  store.set("fwPwHash", await fwHash(neu));
+  ["fwPwAlt", "fwPwNeu", "fwPwNeu2"].forEach(id => $("#" + id).value = "");
+  toast("✓ Passwort geändert");
+};
+
+/* Android: wöchentliche Benachrichtigung, wenn Fristen fällig werden */
+function syncFwReminder(){
+  try{
+    if(!(window.Android && Android.setFristen)) return;
+    const d = fwDaten();
+    // Ab diesem Tag gilt eine Frist als fällig (Ablaufdatum minus Vorlaufzeit)
+    const ab = [];
+    [...d.fahrzeuge, ...d.fahrer].forEach(o => Object.values(o.fristen || {}).forEach(iso => { if(iso) ab.push(isoPlusMonate(iso, -d.vorlauf)); }));
+    Android.setFristen(ab.join(","), d.tag);
+  }catch(e){}
+}
+function openFwFromNotification(){
+  if(cur.startsWith("s-fw")) return;
+  if(EINGABE.includes(cur) && !confirm("Aktuelle Eingaben verwerfen und Fristenwächter öffnen?")) return;
+  $("#goFw").click();
+}
+
+/* ---------- Führerscheinkontrolle (monatlich) ---------- */
+// nurCE: nur bei Führerscheinklasse CE nötig; nurMitAdr: nur wenn eine ADR-Karte vorhanden ist
+const FS_DOKUMENTE = [
+  { id: "fs",  name: "Führerschein" },
+  { id: "bkf", name: "Berufskraftfahrer-Qualifikationsnachweis", nurCE: true },
+  { id: "fk",  name: "Fahrerkarte", nurCE: true },
+  { id: "adr", name: "ADR-Karte", nurMitAdr: true }
+];
+const SEITEN = [["v", "Vorderseite"], ["r", "Rückseite"]];
+let fsPhotos = {}, fsAdr = null, fsKlasse = null;
+const fsDocsAktiv = () => FS_DOKUMENTE.filter(d => (!d.nurMitAdr || fsAdr) && (!d.nurCE || fsKlasse === "CE"));
+
+const monatKey = (d = new Date()) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+const monatName = (d = new Date()) => d.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+// Fällig, solange im aktuellen Kalendermonat noch keine Führerscheinkontrolle gemacht wurde
+const fsFaellig = () => { const l = store.get("fsLast", null); return !l || l.monat !== monatKey(); };
+
+function renderFsStatus(){
+  const due = fsFaellig(), l = store.get("fsLast", null);
+  $("#fsDue").classList.toggle("hidden", !due);
+  $("#fsDue").textContent = `⚠ Führerscheinkontrolle für ${monatName()} fällig – jetzt erledigen ›`;
+  $("#fsStatus").innerHTML = due
+    ? `<span style="color:var(--bad);font-weight:600">Fällig für ${esc(monatName())}</span>`
+    : `<span style="color:var(--ok);font-weight:600">✓ Erledigt für ${esc(monatName())}</span> (am ${esc(fmtDate(l.datum))})`;
+}
+
+// Android-App: Monat der letzten Kontrolle an die Benachrichtigung melden
+function syncFsReminder(){
+  const l = store.get("fsLast", null);
+  try{ if(window.Android && Android.setFsDone) Android.setFsDone(l ? l.monat : ""); }catch(e){}
+}
+// Aufruf beim Antippen der Android-Benachrichtigung
+function openFsFromNotification(){
+  if(cur === "s-fs") return;
+  if((cur === "s-form" || cur === "s-nd") && !confirm("Aktuelle Eingaben verwerfen und Führerscheinkontrolle öffnen?")) return;
+  startFs();
+}
+
+function startFs(){
+  mode = "fs"; fsPhotos = {};
+  const last = store.get("lastDriver", {});
+  $("#fs-fahrer").value = last.fahrer || "";
+  $("#fs-zeit").value = nowLocal();
+  $("#fs-bem").value = "";
+  $("#fs-bestaet").checked = false;
+  fsAdr = store.get("fsAdr", null);       // letzte Antworten merken
+  fsKlasse = store.get("fsKlasse", null);
+  renderFsAdr();
+  show("s-fs");
+}
+
+document.querySelectorAll("[data-adr]").forEach(b => b.onclick = () => {
+  fsAdr = b.dataset.adr === "ja";
+  renderFsAdr();
+});
+document.querySelectorAll("[data-klasse]").forEach(b => b.onclick = () => {
+  fsKlasse = b.dataset.klasse;
+  renderFsAdr();
+});
+function renderFsAdr(){
+  document.querySelectorAll("[data-adr]").forEach(x => x.className = fsAdr === null ? "" : (x.dataset.adr === "ja") === fsAdr ? "on ok" : "");
+  document.querySelectorAll("[data-klasse]").forEach(x => x.className = x.dataset.klasse === fsKlasse ? "on ok" : "");
+  if(fsAdr !== null) $("#fsAdrCard").classList.remove("missing");
+  if(fsKlasse !== null) $("#fsKlasseCard").classList.remove("missing");
+  // Fotos von Dokumenten, die nicht mehr gebraucht werden, verwerfen
+  const aktiv = fsDocsAktiv().map(d => d.id);
+  Object.keys(fsPhotos).forEach(k => { if(!aktiv.includes(k.split("-")[0])) delete fsPhotos[k]; });
+  renderFsDocs();
+}
+
+function renderFsDocs(){
+  const wrap = $("#fsDocs"); wrap.innerHTML = "";
+  if(!fsKlasse){ wrap.innerHTML = '<p class="hint" style="margin:0 0 14px">Bitte zuerst die Führerscheinklasse wählen.</p>'; return; }
+  fsDocsAktiv().forEach(d => {
+    const card = document.createElement("div"); card.className = "card";
+    card.innerHTML = `<h2>${esc(d.name)}*</h2><div class="slots"></div>`;
+    SEITEN.forEach(([s, label]) => {
+      const key = d.id + "-" + s;
+      const slot = document.createElement("label");
+      slot.className = "slot" + (fsPhotos[key] ? " has" : ""); slot.dataset.key = key;
+      slot.innerHTML = fsPhotos[key]
+        ? `<img src="${fsPhotos[key]}" alt=""><span>${label} – neu aufnehmen</span>`
+        : `<div>📷</div><div>${label}</div>`;
+      const inp = document.createElement("input");
+      inp.type = "file"; inp.accept = "image/*"; inp.setAttribute("capture", "environment"); inp.className = "hidden";
+      inp.onchange = async () => {
+        if(!inp.files[0]) return;
+        try{ fsPhotos[key] = await shrink(inp.files[0], 1600); }catch(e){ toast("Foto konnte nicht geladen werden"); }
+        renderFsDocs();
+      };
+      slot.appendChild(inp);
+      card.querySelector(".slots").appendChild(slot);
+    });
+    wrap.appendChild(card);
+  });
+}
+
+function submitFs(){
+  const err = []; let first = null;
+  const fahrer = $("#fs-fahrer").value.trim();
+  if(!fahrer){ err.push("Name"); first = $("#fs-fahrer"); }
+  if(fsKlasse === null){ err.push("Führerscheinklasse"); $("#fsKlasseCard").classList.add("missing"); first = first || $("#fsKlasseCard"); }
+  if(fsAdr === null){ err.push("ADR-Karte ja/nein"); $("#fsAdrCard").classList.add("missing"); first = first || $("#fsAdrCard"); }
+  let fehlend = 0;
+  document.querySelectorAll("#fsDocs .slot").forEach(sl => {
+    const miss = !fsPhotos[sl.dataset.key];
+    sl.classList.toggle("missing", miss);
+    if(miss){ fehlend++; first = first || sl; }
+  });
+  if(fehlend) err.push(fehlend + " Foto(s) fehlen");
+  if(!$("#fs-bestaet").checked) err.push("Bestätigung");
+  if(err.length){
+    toast("Bitte ergänzen: " + err.join(", "));
+    (first || $("#fs-bestaet")).scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  const s = settings(), zeit = $("#fs-zeit").value, d = new Date(zeit || Date.now());
+  const docs = fsDocsAktiv();
+  const r = {
+    id: Date.now(), mode: "fs", modeName: "Führerscheinkontrolle", fahrer, kennz: "", anh: "", km: "",
+    zeit, zeitText: fmtDateTime(zeit || new Date()), monat: monatName(d), adr: fsAdr, klasse: fsKlasse,
+    bem: $("#fs-bem").value.trim(), maengel: [], vs: true, items: [],
+    docs: docs.map(x => ({ name: x.name, v: fsPhotos[x.id + "-v"], r: fsPhotos[x.id + "-r"] })),
+    photos: []
+  };
+  r.subject = `Führerscheinkontrolle ${r.monat} – ${fahrer}`;
+  r.text = [
+    `${s.firma} – Führerscheinkontrolle ${r.monat}`, "",
+    `Fahrer: ${fahrer}`, `Führerscheinklasse: ${fsKlasse}`, `Zeitpunkt: ${r.zeitText}`, "",
+    "Fotografiert (Vorder- und Rückseite):",
+    ...docs.map(x => "- " + x.name),
+    `ADR-Karte: ${fsAdr ? "vorhanden" : "nicht vorhanden"}`,
+    ...(r.bem ? ["", "Bemerkungen:", r.bem] : []),
+    "", "Fotos: siehe PDF", "Vom Fahrer bestätigt: eigene, gültige Originaldokumente."
+  ].join("\n");
+  store.set("lastDriver", Object.assign(store.get("lastDriver", {}), { fahrer }));
+  store.set("fsAdr", fsAdr);
+  store.set("fsKlasse", fsKlasse);
+  store.set("fsLast", { monat: monatKey(d), datum: d.toISOString() });
+  syncFsReminder();
+  lastReport = r;
+  saveHistory(r);
+  showDone(r);
+}
 
 function fmtDate(s){ if(!s) return ""; const d = new Date(s); return isNaN(d) ? s : d.toLocaleDateString("de-DE"); }
 function fmtDateTime(s){ const d = new Date(s); return isNaN(d) ? s : d.toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }); }
@@ -521,7 +2260,7 @@ function buildReport(){
   const r = {
     id: Date.now(), mode, modeName: MODES[mode].name,
     fahrer: v("f-fahrer"), kennz: v("f-kennz").toUpperCase(), anh: v("f-anh").toUpperCase(),
-    km: v("f-km"), zeit: v("f-zeit"), zeitText: fmtDateTime(v("f-zeit") || new Date()),
+    km: v("f-km"), ort: mode === "mangel" ? v("f-ort") : "", zeit: v("f-zeit"), zeitText: fmtDateTime(v("f-zeit") || new Date()),
     von: v("f-von"), bis: v("f-bis"), vertr: v("f-vertr"), tank: v("f-tank"), adblue: v("f-adblue"), schl: v("f-schl"),
     bem: v("f-bem"), items, maengel: maengel.map(a => a.punkt + ": " + a.note.trim()),
     // Mangelfotos zuerst, mit Prüfpunkt beschriftet; Fotos von zurückgenommenen Mängeln entfallen
@@ -540,7 +2279,8 @@ function buildReport(){
   if(r.vs) L.push("Fahrzeug laut Fahrer VERKEHRSSICHER.", "");
   else L.push("!!! FAHRZEUG NICHT VERKEHRSSICHER !!!", "Begründung: " + r.vsGrund, "");
   L.push(`Fahrer: ${r.fahrer}`, `Fahrzeug: ${r.kennz}` + (r.anh ? ` / Anhänger: ${r.anh}` : ""), `km-Stand: ${r.km}`, `Zeitpunkt: ${r.zeitText}`);
-  if(mode !== "abfahrt"){
+  if(r.ort) L.push(`Standort: ${r.ort}`);
+  if(mode === "uebergabe" || mode === "uebernahme"){
     if(r.von || r.bis) L.push(`Abwesenheit: ${fmtDate(r.von) || "?"} – ${fmtDate(r.bis) || "?"}`);
     if(r.vertr) L.push(`${MODES[mode].vertr}: ${r.vertr}`);
     L.push(`Tank: ${r.tank} · AdBlue: ${r.adblue}` + (r.schl ? ` · Schlüssel: ${r.schl}` : ""));
@@ -548,10 +2288,10 @@ function buildReport(){
   L.push("");
   if(maengel.length){
     L.push(`MÄNGEL (${maengel.length}):`);
-    maengel.forEach(a => L.push(`- [${a.gruppe}] ${a.punkt}: ${a.note.trim()}`));
+    maengel.forEach(a => L.push(`- ${mode === "mangel" ? "" : `[${a.gruppe}] `}${a.punkt}: ${a.note.trim()}`));
   } else L.push("Keine Mängel festgestellt.");
   const na = items.filter(a => a.status === "na");
-  L.push(`Geprüft: ${items.length} Punkte – ${items.filter(a => a.status === "ok").length} OK, ${maengel.length} Mangel, ${na.length} nicht zutreffend.`);
+  if(mode !== "mangel") L.push(`Geprüft: ${items.length} Punkte – ${items.filter(a => a.status === "ok").length} OK, ${maengel.length} Mangel, ${na.length} nicht zutreffend.`);
   if(r.bem) L.push("", "Bemerkungen:", r.bem);
   L.push("", `Fotos: ${r.photos.length}` + (r.photos.length ? " (siehe PDF)" : ""), "Vom Fahrer unterschrieben und bestätigt.");
   r.text = L.join("\n");
@@ -560,13 +2300,19 @@ function buildReport(){
 
 function saveHistory(r){
   const h = store.get("history", []);
-  h.unshift({ id: r.id, mode: r.mode, modeName: r.modeName, fahrer: r.fahrer, kennz: r.kennz, km: r.km, tank: r.tank, zeitText: r.zeitText, maengel: r.maengel, vs: r.vs });
+  h.unshift({ id: r.id, mode: r.mode, modeName: r.modeName, fahrer: r.fahrer, kennz: r.kennz, km: r.km, tank: r.tank, zeitText: r.zeitText, maengel: r.maengel, vs: r.vs, monat: r.monat, art: r.art });
   store.set("history", h.slice(0, 30));
 }
 function renderHistory(){
   const h = store.get("history", []), w = $("#history");
-  if(!h.length){ w.innerHTML = '<p class="hint">Noch keine Kontrollen.</p>'; return; }
-  w.innerHTML = h.slice(0, 10).map(x => `<div class="hist">
+  if(!h.length){ w.innerHTML = '<p class="hint">Noch keine Einträge.</p>'; return; }
+  w.innerHTML = h.slice(0, 10).map(x => x.mode === "fs" ? `<div class="hist">
+    <span class="tag ok">✓</span> <b>Führerscheinkontrolle</b> · ${esc(x.monat)}<br>
+    <span class="hint">${esc(x.zeitText)} · ${esc(x.fahrer)}</span></div>`
+  : x.mode === "notdienst" ? `<div class="hist">
+    <span class="tag bad">🚨 NOTDIENST</span> ${x.vs === false ? '<span class="tag bad">keine Weiterfahrt</span>' : ""}
+    <b>${esc(x.kennz)}</b> · ${esc(x.art || "")}<br>
+    <span class="hint">${esc(x.zeitText)} · ${esc(x.fahrer)}</span></div>` : `<div class="hist">
     ${x.vs === false ? '<span class="tag bad">NICHT VERKEHRSSICHER</span>' : ""}
     ${x.maengel.length ? `<span class="tag bad">${x.maengel.length} Mangel</span>` : x.vs === false ? "" : '<span class="tag ok">OK</span>'}
     <b>${esc(MODES[x.mode] ? MODES[x.mode].kurz : x.modeName)}</b> · ${esc(x.kennz)}<br>
@@ -574,7 +2320,47 @@ function renderHistory(){
 }
 
 /* ---------- PDF ---------- */
+function buildFsPdf(r){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210, M = 15; let y = 18;
+  const s = settings();
+  doc.addImage(LOGO, "PNG", W - M - 55, 9, 55, 55 * 111 / 800);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("Führerscheinkontrolle " + r.monat, M, y); y += 7;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(90); doc.text(s.firma, M, y); doc.setTextColor(0); y += 9;
+  doc.setFontSize(11);
+  [["Fahrer", r.fahrer], ["Klasse", r.klasse], ["Zeitpunkt", r.zeitText], ["ADR-Karte", r.adr ? "vorhanden" : "nicht vorhanden"]].forEach(([k, v]) => {
+    doc.setFont("helvetica","bold"); doc.text(k + ":", M, y); doc.setFont("helvetica","normal"); doc.text(String(v), M + 30, y); y += 6;
+  });
+  if(r.bem){ const b = doc.splitTextToSize("Bemerkungen: " + r.bem, W - 2*M); doc.text(b, M, y); y += b.length * 5; }
+  doc.setFontSize(8); doc.setTextColor(90);
+  doc.text("Vom Fahrer bestätigt: Die fotografierten Dokumente sind eigene, gültige Originale.", M, y + 2); doc.setTextColor(0);
+  y += 10;
+  // je Dokument eine Zeile: Vorder- und Rückseite nebeneinander
+  const cw = (W - 2*M - 6) / 2;
+  r.docs.forEach(d => {
+    const hs = [d.v, d.r].map(img => { const p = doc.getImageProperties(img); return Math.min(cw * p.height / p.width, 95); });
+    const h = Math.max(...hs);
+    if(y + h + 14 > 285){ doc.addPage(); y = 18; }
+    doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.text(d.name, M, y); y += 3;
+    [d.v, d.r].forEach((img, i) => {
+      const p = doc.getImageProperties(img), ih = hs[i], iw = ih * p.width / p.height;
+      const x = M + i * (cw + 6);
+      doc.addImage(img, "JPEG", x, y, iw, ih);
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(90);
+      doc.text(i ? "Rückseite" : "Vorderseite", x, y + ih + 4); doc.setTextColor(0);
+    });
+    y += h + 10;
+  });
+  const pages = doc.getNumberOfPages();
+  for(let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(`${r.fahrer} · ${r.zeitText} · Seite ${i}/${pages}`, W/2, 292, { align: "center" }); }
+  return doc;
+}
+
 function buildPdf(r){
+  if(r.mode === "fs") return buildFsPdf(r);
+  if(r.mode === "notdienst") return buildNdPdf(r);
+  if(r.mode === "ze") return buildZePdf(r);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210, M = 15; let y = 18;
@@ -584,7 +2370,8 @@ function buildPdf(r){
   doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text(r.modeName, M, y); y += 7;
   doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(90); doc.text(s.firma, M, y); doc.setTextColor(0); y += 8;
   const info = [["Fahrer", r.fahrer], ["Fahrzeug", r.kennz + (r.anh ? " / Anhänger " + r.anh : "")], ["km-Stand", r.km], ["Zeitpunkt", r.zeitText]];
-  if(r.mode !== "abfahrt"){
+  if(r.ort) info.push(["Standort", r.ort]);
+  if(r.mode === "uebergabe" || r.mode === "uebernahme"){
     if(r.von || r.bis) info.push(["Abwesenheit", (fmtDate(r.von) || "?") + " – " + (fmtDate(r.bis) || "?")]);
     if(r.vertr) info.push([r.mode === "uebergabe" ? "Übergeben an" : "Übernommen von", r.vertr]);
     info.push(["Tank / AdBlue", r.tank + " / " + r.adblue]);
@@ -608,7 +2395,7 @@ function buildPdf(r){
   }
   doc.setTextColor(0); doc.setFontSize(11);
   doc.setFont("helvetica","bold");
-  if(r.maengel.length){ doc.setTextColor(198,40,40); doc.text(`${r.maengel.length} Mangel/Mängel festgestellt`, M, y); }
+  if(r.maengel.length){ doc.setTextColor(198,40,40); doc.text(`${r.maengel.length} Mangel/Mängel ${r.mode === "mangel" ? "gemeldet" : "festgestellt"}`, M, y); }
   else { doc.setTextColor(30,142,74); doc.text("Keine Mängel festgestellt", M, y); }
   doc.setTextColor(0); y += 8;
   let grp = null;
@@ -650,14 +2437,20 @@ function buildPdf(r){
   for(let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(`${r.kennz} · ${r.zeitText} · Seite ${i}/${pages}`, W/2, 292, { align: "center" }); }
   return doc;
 }
-function pdfName(r){ return `${r.mode}_${r.kennz.replace(/[^A-Z0-9]/gi,"")}_${(r.zeit||"").replace(/[:T]/g,"-")}.pdf`; }
+function pdfName(r){ return `${r.mode}_${(r.kennz || r.fahrer).replace(/[^A-Z0-9]/gi,"")}_${(r.zeit||"").replace(/[:T]/g,"-")}.pdf`; }
 
 /* ---------- Versand ---------- */
 function showDone(r){
   const s = settings();
-  $("#doneSummary").innerHTML = `${esc(r.modeName)} für <b>${esc(r.kennz)}</b> – ` +
-    (r.vs ? "" : `<span class="tag bad">NICHT VERKEHRSSICHER</span> `) +
-    (r.maengel.length ? `<span class="tag bad">${r.maengel.length} Mangel</span>` : r.vs ? `<span class="tag ok">keine Mängel</span>` : "");
+  $("#doneSummary").innerHTML = r.mode === "fs"
+    ? `Führerscheinkontrolle <b>${esc(r.monat)}</b> für ${esc(r.fahrer)} – <span class="tag ok">${r.docs.length * 2} Fotos</span>`
+    : r.mode === "notdienst"
+    ? `<span class="tag bad">🚨 NOTDIENST</span> <b>${esc(r.kennz)}</b> – ${esc(r.art)} – ` +
+      (r.wf ? `<span class="tag ok">Weiterfahrt möglich</span>` : `<span class="tag bad">Reparatur nötig</span>`) +
+      `<br><span class="hint">${r.photos.length} Foto(s), ${r.videos.length} Video(s)</span>`
+    : `${esc(r.modeName)} für <b>${esc(r.kennz)}</b> – ` +
+      (r.vs ? "" : `<span class="tag bad">NICHT VERKEHRSSICHER</span> `) +
+      (r.maengel.length ? `<span class="tag bad">${r.maengel.length} Mangel</span>` : r.vs ? `<span class="tag ok">keine Mängel</span>` : "");
   $("#doneTo").textContent = s.empfaenger + (s.cc ? " (CC: " + s.cc + ")" : "");
   $("#donePreview").textContent = "Betreff: " + r.subject + "\n\n" + r.text;
   const a = $("#sendArea"); a.innerHTML = "";
@@ -665,7 +2458,8 @@ function showDone(r){
     addBtn(a, "✉ Automatisch senden", "", () => sendWebhook(r));
   }
   addBtn(a, "✉ E-Mail mit PDF senden", s.webhookUrl ? "sec" : "", () => sharePdf(r));
-  addBtn(a, "✉ E-Mail ohne Anhang (nur Text)", "sec", () => sendMailto(r));
+  // Führerscheinkontrolle ohne Fotos ist wertlos -> kein Versand ohne Anhang
+  if(r.mode !== "fs") addBtn(a, "✉ E-Mail ohne Anhang (nur Text)", "sec", () => sendMailto(r));
   a.insertAdjacentHTML("beforeend", window.Android
     ? `<p class="hint">„Mit PDF“ öffnet die Mail-App mit Empfänger, Betreff, Text und PDF – nur noch auf Senden tippen.</p>`
     : `<p class="hint">„Mit PDF“ öffnet das Teilen-Menü des Handys – dort die Mail-App wählen. Der Empfänger wird automatisch in die Zwischenablage kopiert, falls er nicht vorausgefüllt ist.</p>`);
@@ -675,7 +2469,7 @@ function addBtn(parent, text, cls, fn){ const b = document.createElement("button
 
 function mailtoUrl(r, body){
   const s = settings();
-  return `mailto:${encodeURIComponent(s.empfaenger).replace(/%40/g,"@").replace(/%2C/g,",")}?` +
+  return `mailto:${encodeURIComponent(r.to || s.empfaenger).replace(/%40/g,"@").replace(/%2C/g,",")}?` +
     (s.cc ? `cc=${encodeURIComponent(s.cc)}&` : "") +
     `subject=${encodeURIComponent(r.subject)}&body=${encodeURIComponent(body)}`;
 }
@@ -684,23 +2478,30 @@ function sendMailto(r){ location.href = mailtoUrl(r, r.text); }
 async function sharePdf(r){
   const s = settings();
   let blob;
+  const videos = r.videos || [];
   if(window.Android){
     // Android-App: Mail-App direkt mit Empfänger und PDF-Anhang öffnen
     try{
       const b64 = buildPdf(r).output("datauristring").split(",")[1];
-      Android.sendMailWithPdf(b64, pdfName(r), s.empfaenger, s.cc || "", r.subject, r.text);
+      // Videos hält die Android-App selbst bereit und hängt sie zusätzlich an
+      if(videos.length && Android.sendMailWithPdfAndVideos)
+        Android.sendMailWithPdfAndVideos(b64, pdfName(r), r.to || s.empfaenger, s.cc || "", r.subject, r.text);
+      else
+        Android.sendMailWithPdf(b64, pdfName(r), r.to || s.empfaenger, s.cc || "", r.subject, r.text);
       markSent();
     }catch(e){ toast("PDF konnte nicht erstellt werden"); }
     return;
   }
   try{ blob = buildPdf(r).output("blob"); }catch(e){ toast("PDF konnte nicht erstellt werden"); return; }
   const file = new File([blob], pdfName(r), { type: "application/pdf" });
+  const files = [file, ...videos];
   // nicht abwarten: iPhone erlaubt das Teilen nur direkt nach dem Antippen
-  try{ navigator.clipboard.writeText(s.empfaenger).catch(() => {}); }catch(e){}
-  if(navigator.canShare && navigator.canShare({ files: [file] })){
-    try{ await navigator.share({ files: [file], title: r.subject, text: r.text }); markSent(); return; }
+  try{ navigator.clipboard.writeText(r.to || s.empfaenger).catch(() => {}); }catch(e){}
+  if(navigator.canShare && navigator.canShare({ files })){
+    try{ await navigator.share({ files, title: r.subject, text: r.text }); markSent(); return; }
     catch(e){ if(e.name === "AbortError") return; }
   }
+  if(videos.length) toast("Videos bitte manuell an die E-Mail anhängen");
   // Fallback (z.B. PC): PDF speichern und Mailprogramm öffnen
   downloadBlob(blob, file.name);
   toast("PDF gespeichert – bitte in der E-Mail anhängen");
@@ -718,7 +2519,7 @@ async function sendWebhook(r){
     markSent(); toast("✓ Erfolgreich gesendet");
   }catch(e){ toast("Senden fehlgeschlagen – bitte „E-Mail mit PDF“ nutzen"); }
 }
-function markSent(){ $("#doneTitle").textContent = "✓ Kontrolle versendet"; }
+function markSent(){ $("#doneTitle").textContent = lastReport && lastReport.mode === "notdienst" ? "✓ Notdienst gesendet" : "✓ Kontrolle versendet"; }
 
 $("#btnPdf").onclick = () => {
   if(!lastReport) return;
@@ -729,12 +2530,14 @@ function downloadBlob(blob, name){ const u = URL.createObjectURL(blob); const a 
 
 /* ---------- Einstellungen ---------- */
 $("#settingsBtn").onclick = () => {
-  if(!$("#s-form").classList.contains("hidden")) return toast("Erst Kontrolle abschließen oder verwerfen");
+  if(EINGABE.includes(cur) || cur.startsWith("s-fw")) return toast("Erst abschließen oder verwerfen");
   const pin = prompt("Admin-PIN:");
   if(pin === null) return;
   if(pin !== CONFIG.adminPin) return toast("Falsche PIN");
   const s = settings();
   $("#c-firma").value = s.firma; $("#c-to").value = s.empfaenger; $("#c-cc").value = s.cc; $("#c-hook").value = s.webhookUrl;
+  zeVorgabenAnzeigen();
+  todoKollegenAnzeigen();
   show("s-settings");
 };
 $("#saveSettings").onclick = () => {
@@ -753,6 +2556,12 @@ function toast(msg){ document.querySelectorAll(".toast").forEach(t => t.remove()
 
 $("#logo").src = LOGO;
 renderHistory();
+renderFsStatus();
+syncFsReminder();
+renderFwStatus();
+syncFwReminder();
+renderZeStatus();
+renderTodoStatus();
 
 // Offline-Betrieb als Web-App (iPhone); in der Android-App nicht nötig
 if("serviceWorker" in navigator && !window.Android && /^https:|^http:\/\/localhost/.test(location.href)){
