@@ -19,13 +19,14 @@
    KONFIGURATION – hier die festen Werte für den Betrieb eintragen
    ============================================================ */
 // Wird beim Bauen (build-apk.ps1 / build-web.ps1) automatisch durch die Versionsnummer ersetzt
-const APP_VERSION = "1.9.1";
+const APP_VERSION = "2.0";
 const CONFIG = {
   firma:      "AS Logistik",
   empfaenger: "fuhrpark@aslogistik-lu.com",  // feste Empfängeradresse
   cc:         "",                             // optional, mehrere mit Komma
   adminPin:   "1234",                         // PIN für die Einstellungen
-  webhookUrl: ""  // optional: Endpunkt für automatischen Versand (z.B. Power Automate), siehe Anleitung
+  webhookUrl: "", // optional: Endpunkt für automatischen Versand (z.B. Power Automate), siehe Anleitung
+  serverUrl:  "https://startklar.tailda76b3.ts.net"   // zentraler Startklar-Server (Raspberry Pi über Tailscale)
 };
 </script>
 <style>
@@ -127,6 +128,21 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
 .suche-offen{display:flex;align-items:center;gap:6px;margin:0;color:var(--text);font-size:14px}
 .suche-offen input{width:18px;height:18px;margin:0}
 mark{background:#fff3a0;color:inherit;border-radius:3px;padding:0 1px}
+/* Server: Konto-Leiste, Anmeldung, Benutzerverwaltung */
+.konto{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;margin-bottom:12px}
+.konto:empty{display:none}
+.konto .knoepfe{display:flex;gap:6px;flex-shrink:0}
+button.mini{font:inherit;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--primary);cursor:pointer;white-space:nowrap}
+button.mini:active{opacity:.7}
+.konto .wer{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.konto .punkt{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--ok)}
+.konto .punkt.aus{background:var(--na)}
+.au-zeile{border-top:1px solid var(--line);padding:10px 0;font-size:14px}
+.au-zeile:first-child{border-top:0}
+.au-zeile.inaktiv{opacity:.55}
+.au-zeile .aktionen{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.au-zeile select{width:auto;padding:6px 8px;font-size:14px}
+.startpw{font:600 22px/1.3 ui-monospace,Consolas,monospace;letter-spacing:1px;background:var(--bg);border-radius:8px;padding:8px 12px;margin:6px 0;user-select:all}
 /* Ablaufdaten in der Führerscheinkontrolle / Übernahme in den Fristenwächter */
 .fs-frist{border-top:1px solid var(--line);margin-top:12px;padding-top:8px}
 .fs-frist.missing label{color:var(--bad)}
@@ -207,11 +223,13 @@ mark{background:#fff3a0;color:inherit;border-radius:3px;padding:0 1px}
 <main>
   <!-- START -->
   <section id="s-start">
+    <div class="konto" id="kontoLeiste"></div>
     <button id="fsDue" class="banner alarm hidden" type="button" style="display:block;width:100%;text-align:left;border:0;font:inherit;font-weight:600;cursor:pointer"></button>
     <button class="big" id="goFzg"><b>🚚 Fahrzeugkontrolle</b><span>Abfahrtskontrolle, Mängelmelder, Übergabe / Übernahme</span></button>
     <button class="big" id="goFs"><b>🪪 Führerscheinkontrolle</b><span id="fsStatus">Monatlich: Führerschein, Qualifikationsnachweis, Fahrerkarte, ADR</span></button>
     <button class="big" id="goZe"><b>⏱ Zeiterfassung</b><span id="zeStatus">Stempeluhr, Arbeitszeiten, Urlaub &amp; Krankmeldung</span></button>
     <button class="big" id="goTodo"><b>✅ ToDo</b><span id="todoStatus">Aufgaben erfassen, priorisieren und vergeben</span></button>
+    <button class="big hidden" id="goAdmin"><b>👥 Benutzerverwaltung</b><span>Mitarbeiter anlegen, Rollen, Passwörter</span></button>
     <button class="big" id="goFw"><b>🔒 Fristenwächter</b><span id="fwStatus">Ablaufdaten Fuhrpark – nur mit Passwort</span></button>
     <div class="card">
       <h2>Letzte Einträge auf diesem Gerät</h2>
@@ -383,6 +401,59 @@ mark{background:#fff3a0;color:inherit;border-radius:3px;padding:0 1px}
       <p class="hint" id="zeaTage"></p>
       <div id="zeaKommentarWrap"><label for="zea-kommentar">Kommentar (optional)</label><input id="zea-kommentar" maxlength="300"></div>
     </div>
+  </section>
+
+  <!-- SERVER: Anmeldung / Ersteinrichtung -->
+  <section id="s-login" class="hidden">
+    <div class="card" id="loginKarte">
+      <h2>🔐 Anmelden</h2>
+      <p class="hint" style="margin-top:0">Mit deinem Startklar-Zugang. Den bekommst du vom Büro.</p>
+      <label for="li-user">Benutzername</label><input id="li-user" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <label for="li-pw">Passwort</label><input id="li-pw" type="password" autocomplete="current-password">
+      <button class="btn" type="button" id="liBtn">Anmelden</button>
+      <p class="hint" id="liMsg" style="color:var(--bad)"></p>
+    </div>
+    <div class="card hidden" id="setupKarte">
+      <h2>Ersteinrichtung des Servers</h2>
+      <p class="hint" style="margin-top:0">Der Server hat noch keinen Admin. Lege hier den ersten Admin an.</p>
+      <label for="su-code">Einrichtungscode</label><input id="su-code" autocapitalize="characters" autocomplete="off">
+      <label for="su-name">Dein Name</label><input id="su-name" autocomplete="name">
+      <label for="su-user">Benutzername (zum Anmelden)</label><input id="su-user" autocapitalize="none" spellcheck="false" placeholder="z.B. m.wagner">
+      <label for="su-pw">Passwort (mind. 8 Zeichen)</label><input id="su-pw" type="password" autocomplete="new-password">
+      <label for="su-pw2">Passwort wiederholen</label><input id="su-pw2" type="password" autocomplete="new-password">
+      <button class="btn" type="button" id="suBtn">Admin anlegen</button>
+      <p class="hint" id="suMsg" style="color:var(--bad)"></p>
+    </div>
+    <p class="hint" id="liServer" style="text-align:center"></p>
+  </section>
+
+  <!-- SERVER: eigenes Passwort festlegen (Pflicht nach Startpasswort) -->
+  <section id="s-pwneu" class="hidden">
+    <div class="card">
+      <h2>Eigenes Passwort festlegen</h2>
+      <p class="hint" style="margin-top:0" id="pnHinweis"></p>
+      <label for="pn-alt">Aktuelles Passwort / Startpasswort</label><input id="pn-alt" type="password" autocomplete="current-password">
+      <label for="pn-neu">Neues Passwort (mind. 8 Zeichen)</label><input id="pn-neu" type="password" autocomplete="new-password">
+      <label for="pn-neu2">Neues Passwort wiederholen</label><input id="pn-neu2" type="password" autocomplete="new-password">
+      <button class="btn" type="button" id="pnBtn">Passwort speichern</button>
+      <p class="hint" id="pnMsg" style="color:var(--bad)"></p>
+    </div>
+  </section>
+
+  <!-- SERVER: Benutzerverwaltung (nur Admin) -->
+  <section id="s-admin" class="hidden">
+    <div class="card">
+      <h2>Neuen Mitarbeiter anlegen</h2>
+      <label for="nu-name">Vor- und Nachname</label><input id="nu-name" autocomplete="off">
+      <div class="row">
+        <div><label for="nu-user">Benutzername</label><input id="nu-user" autocapitalize="none" spellcheck="false" placeholder="z.B. p.scheifling"></div>
+        <div><label for="nu-rolle">Rolle</label><select id="nu-rolle"><option value="fahrer">Fahrer</option><option value="lager">Lager</option><option value="buero">Büro</option><option value="admin">Admin</option></select></div>
+      </div>
+      <label for="nu-mail">E-Mail (optional)</label><input id="nu-mail" type="email" autocomplete="off">
+      <button class="btn" type="button" id="nuBtn">Anlegen</button>
+    </div>
+    <div class="card" id="nuErgebnis" style="display:none"></div>
+    <div class="card"><h2>Mitarbeiter</h2><div id="adminListe"><p class="hint">Wird geladen …</p></div></div>
   </section>
 
   <!-- TODO -->
@@ -667,6 +738,7 @@ mark{background:#fff3a0;color:inherit;border-radius:3px;padding:0 1px}
       <label for="c-to">Empfänger-E-Mail*</label><input id="c-to" type="email">
       <label for="c-cc">CC (optional, mit Komma trennen)</label><input id="c-cc">
       <label for="c-hook">Webhook für automatischen Versand (optional)</label><input id="c-hook" type="url" placeholder="https://…">
+      <label for="c-server">Startklar-Server</label><input id="c-server" type="url" placeholder="https://startklar.….ts.net">
       <button class="btn" id="saveSettings">Speichern</button>
       <button class="btn sec" id="resetSettings">Auf Standard zurücksetzen</button>
       <button class="btn sec" id="clearHistory">Verlauf auf diesem Gerät löschen</button>
@@ -1106,11 +1178,11 @@ let cur = "s-start", fwSession = false, zeTimer = null;
 const TITLES = { "s-fzg": "Fahrzeugkontrolle", "s-fs": "Führerscheinkontrolle", "s-nd": "🚨 Notdienst", "s-settings": "Einstellungen",
   "s-done": "Startklar", "s-fw-login": "🔒 Fristenwächter", "s-fw": "Fristenwächter",
   "s-ze": "⏱ Zeiterfassung", "s-ze-entry": "Arbeitszeit", "s-ze-abs": "Urlaub / Krank", "s-todo": "✅ ToDo", "s-todo-edit": "ToDo",
-  "s-fw-import": "Aus Führerscheinkontrolle übernehmen" };
+  "s-fw-import": "Aus Führerscheinkontrolle übernehmen", "s-login": "Anmelden", "s-pwneu": "Passwort", "s-admin": "👥 Benutzerverwaltung" };
 const EINGABE = ["s-form", "s-fs", "s-nd", "s-fw-edit", "s-ze-entry", "s-ze-abs", "s-todo-edit"];   // Seiten mit Eingaben, die verloren gehen können
 function show(id){
   cur = id;
-  ["s-start","s-fzg","s-form","s-fs","s-nd","s-done","s-settings","s-fw-login","s-fw","s-fw-edit","s-fw-import","s-ze","s-ze-entry","s-ze-abs","s-todo","s-todo-edit"]
+  ["s-start","s-fzg","s-form","s-fs","s-nd","s-done","s-settings","s-fw-login","s-fw","s-fw-edit","s-fw-import","s-ze","s-ze-entry","s-ze-abs","s-todo","s-todo-edit","s-login","s-pwneu","s-admin"]
     .forEach(s => $("#"+s).classList.toggle("hidden", s !== id));
   if(id !== "s-ze") clearInterval(zeTimer);
   $("#formBar").classList.toggle("hidden", !EINGABE.includes(id));
@@ -1134,6 +1206,8 @@ $("#backBtn").onclick = () => {
   if(cur === "s-ze-entry" || cur === "s-ze-abs") return zeZeigen();
   if(cur === "s-todo-edit") return todoZeigen();
   if(cur === "s-fw-import") return fwZeigen("fahrer");
+  // Pflicht-Passwortwechsel: Zurück heißt abmelden
+  if(cur === "s-pwneu" && pwPflicht){ if(!confirm("Ohne eigenes Passwort abmelden?")) return; api("/api/logout", { method: "POST" }).catch(() => {}); kontoWeg(); }
   show(cur === "s-form" || cur === "s-nd" ? "s-fzg" : cur === "s-fw-edit" ? "s-fw" : "s-start");
 };
 $("#goNd").onclick = () => startNd();
@@ -2726,6 +2800,9 @@ const FS_DOKUMENTE = [
     { key: "adr", label: "Gültig bis", fw: "Gefahrgutschein (ADR)" }]}
 ];
 let fsDaten = {};   // eingetragene Ablaufdaten (ISO-Datum oder "unbefristet")
+let fsFotoHash = {}, fsFotoZeit = {};   // Fingerabdruck und Aufnahmezeit je Foto
+// Fingerabdruck eines Fotos (FNV-1a über die Bilddaten) – erkennt erneut hochgeladene, identische Fotos
+function fotoHash(s){ let h = 0x811c9dc5; for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + "-" + s.length; }
 const fsFristenAktiv = () => fsDocsAktiv().flatMap(d => d.fristen.filter(f => !f.nurCE || fsKlasse === "CE"));
 function fsDatumStatus(f){
   const v = fsDaten[f.key], alt = store.get("fsDatenLetzte", {})[f.key];
@@ -2770,7 +2847,7 @@ function openFsFromNotification(){
 }
 
 function startFs(){
-  mode = "fs"; fsPhotos = {};
+  mode = "fs"; fsPhotos = {}; fsFotoHash = {}; fsFotoZeit = {};
   const last = store.get("lastDriver", {});
   $("#fs-fahrer").value = last.fahrer || "";
   $("#fs-zeit").value = nowLocal();
@@ -2798,7 +2875,7 @@ function renderFsAdr(){
   if(fsKlasse !== null) $("#fsKlasseCard").classList.remove("missing");
   // Fotos von Dokumenten, die nicht mehr gebraucht werden, verwerfen
   const aktiv = fsDocsAktiv().map(d => d.id);
-  Object.keys(fsPhotos).forEach(k => { if(!aktiv.includes(k.split("-")[0])) delete fsPhotos[k]; });
+  Object.keys(fsPhotos).forEach(k => { if(!aktiv.includes(k.split("-")[0])){ delete fsPhotos[k]; delete fsFotoHash[k]; delete fsFotoZeit[k]; } });
   renderFsDocs();
 }
 
@@ -2817,9 +2894,20 @@ function renderFsDocs(){
         : `<div>📷</div><div>${label}</div>`;
       const inp = document.createElement("input");
       inp.type = "file"; inp.accept = "image/*"; inp.setAttribute("capture", "environment"); inp.className = "hidden";
+      // Android-App: nur die Kamera öffnen, keine Galerie / kein Dateimanager
+      slot.addEventListener("click", () => { try{ if(window.Android && Android.setNurKamera) Android.setNurKamera(true); }catch(e){} });
       inp.onchange = async () => {
         if(!inp.files[0]) return;
-        try{ fsPhotos[key] = await shrink(inp.files[0], 1600); }catch(e){ toast("Foto konnte nicht geladen werden"); }
+        let data;
+        try{ data = await shrink(inp.files[0], 1600); }catch(e){ toast("Foto konnte nicht geladen werden"); return; }
+        // Dasselbe Foto darf nicht erneut verwendet werden (frühere Kontrollen oder anderes Feld dieser Kontrolle)
+        const h = fotoHash(data);
+        const doppelt = Object.entries(fsFotoHash).some(([k, x]) => k !== key && x === h);
+        if(doppelt || store.get("fsFotoHashes", []).includes(h)){
+          toast("Dieses Foto wurde bereits verwendet – bitte das Dokument neu fotografieren");
+          return;
+        }
+        fsPhotos[key] = data; fsFotoHash[key] = h; fsFotoZeit[key] = new Date().toISOString();
         renderFsDocs();
       };
       slot.appendChild(inp);
@@ -2881,7 +2969,8 @@ function submitFs(){
     id: Date.now(), mode: "fs", modeName: "Führerscheinkontrolle", fahrer, kennz: "", anh: "", km: "",
     zeit, zeitText: fmtDateTime(zeit || new Date()), monat: monatName(d), adr: fsAdr, klasse: fsKlasse,
     bem: $("#fs-bem").value.trim(), maengel: [], vs: true, items: [],
-    docs: docs.map(x => ({ name: x.name, v: fsPhotos[x.id + "-v"], r: fsPhotos[x.id + "-r"] })),
+    docs: docs.map(x => ({ name: x.name, v: fsPhotos[x.id + "-v"], r: fsPhotos[x.id + "-r"],
+      vZeit: fsFotoZeit[x.id + "-v"], rZeit: fsFotoZeit[x.id + "-r"] })),
     photos: []
   };
   // Ablaufdaten mit Prüfergebnis
@@ -2916,6 +3005,8 @@ function submitFs(){
     "SK1:" + kodiert + ":SK1ENDE"
   ].join("\n");
   store.set("fsDatenLetzte", Object.fromEntries(r.fristen.map(f => [f.key, f.wert])));
+  // Fingerabdrücke merken, damit diese Fotos später nicht erneut verwendet werden können
+  store.set("fsFotoHashes", [...Object.values(fsFotoHash), ...store.get("fsFotoHashes", [])].slice(0, 200));
   store.set("lastDriver", Object.assign(store.get("lastDriver", {}), { fahrer }));
   store.set("fsAdr", fsAdr);
   store.set("fsKlasse", fsKlasse);
@@ -3042,7 +3133,8 @@ function buildFsPdf(r){
       const x = M + i * (cw + 6);
       doc.addImage(img, "JPEG", x, y, iw, ih);
       doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(90);
-      doc.text(i ? "Rückseite" : "Vorderseite", x, y + ih + 4); doc.setTextColor(0);
+      const zeit = i ? d.rZeit : d.vZeit;
+      doc.text((i ? "Rückseite" : "Vorderseite") + (zeit ? " · aufgenommen " + fmtDateTime(zeit) : ""), x, y + ih + 4); doc.setTextColor(0);
     });
     y += h + 10;
   });
@@ -3233,6 +3325,7 @@ $("#settingsBtn").onclick = () => {
   if(pin !== CONFIG.adminPin) return toast("Falsche PIN");
   const s = settings();
   $("#c-firma").value = s.firma; $("#c-to").value = s.empfaenger; $("#c-cc").value = s.cc; $("#c-hook").value = s.webhookUrl;
+  $("#c-server").value = serverUrl();
   zeVorgabenAnzeigen();
   todoKollegenAnzeigen();
   show("s-settings");
@@ -3241,10 +3334,211 @@ $("#saveSettings").onclick = () => {
   const to = $("#c-to").value.trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return toast("Bitte gültige E-Mail-Adresse eingeben");
   store.set("settings", { firma: $("#c-firma").value.trim() || CONFIG.firma, empfaenger: to, cc: $("#c-cc").value.trim(), webhookUrl: $("#c-hook").value.trim() });
+  const srv = $("#c-server").value.trim().replace(/\/+$/, "");
+  if(srv && !/^https:\/\/|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(srv)) return toast("Server-Adresse muss mit https:// beginnen");
+  if(srv !== serverUrl()){
+    if(srv === CONFIG.serverUrl || !srv) store.del("serverUrl"); else store.set("serverUrl", srv);
+    if(konto){ kontoWeg(); toast("Server geändert – bitte neu anmelden"); }
+  }
   toast("Gespeichert"); show("s-start");
 };
 $("#resetSettings").onclick = () => { store.del("settings"); toast("Zurückgesetzt"); show("s-start"); };
 $("#clearHistory").onclick = () => { if(confirm("Verlauf wirklich löschen?")){ store.del("history"); toast("Verlauf gelöscht"); } };
+
+/* ---------- Server: Anmeldung und Benutzerverwaltung ----------
+   Die lokalen Funktionen laufen weiter ohne Anmeldung (offline). Das Konto wird für die zentralen
+   Funktionen gebraucht, die nach und nach auf den Server wandern. */
+const ROLLEN = { fahrer: "Fahrer", lager: "Lager", buero: "Büro", admin: "Admin" };
+const serverUrl = () => (store.get("serverUrl", "") || CONFIG.serverUrl).replace(/\/+$/, "");
+let konto = store.get("konto", null);   // { token, user, server }
+
+async function api(pfad, opt = {}){
+  const headers = { "Content-Type": "application/json" };
+  if(konto && konto.token) headers.Authorization = "Bearer " + konto.token;
+  let res;
+  try{
+    res = await fetch(serverUrl() + pfad, { method: opt.method || "GET", headers,
+      body: opt.body ? JSON.stringify(opt.body) : undefined, cache: "no-store" });
+  }catch(e){ const f = new Error("Server nicht erreichbar – bitte Internetverbindung prüfen."); f.offline = true; throw f; }
+  let daten = {};
+  try{ daten = await res.json(); }catch(e){}
+  if(!res.ok){
+    const f = new Error(daten.error || "Fehler " + res.status); f.status = res.status;
+    if(res.status === 401 && konto && pfad !== "/api/login"){ kontoWeg(); }
+    throw f;
+  }
+  return daten;
+}
+function kontoSetzen(token, user){ konto = { token, user, server: serverUrl() }; store.set("konto", konto); renderKonto(); }
+function kontoWeg(){ konto = null; store.del("konto"); renderKonto(); }
+const geraet = () => (window.Android ? "Android-App" : /iPhone|iPad/.test(navigator.userAgent) ? "iPhone" : "Browser");
+
+function renderKonto(){
+  const el = $("#kontoLeiste");
+  if(konto){
+    el.innerHTML = `<span class="wer"><span class="punkt"></span>👤 <b>${esc(konto.user.name)}</b> · ${esc(ROLLEN[konto.user.role] || konto.user.role)}</span>
+      <span class="knoepfe"><button type="button" class="mini" id="kontoPw">Passwort</button><button type="button" class="mini" id="kontoAus">Abmelden</button></span>`;
+    $("#kontoPw").onclick = () => pwNeuZeigen(false);
+    $("#kontoAus").onclick = abmelden;
+  }else{
+    el.innerHTML = `<span class="wer"><span class="punkt aus"></span>Nicht angemeldet</span>
+      <button type="button" class="mini" id="kontoAn">Anmelden</button>`;
+    $("#kontoAn").onclick = loginZeigen;
+  }
+  $("#goAdmin").classList.toggle("hidden", !(konto && konto.user.role === "admin"));
+}
+
+async function loginZeigen(){
+  $("#liMsg").textContent = ""; $("#suMsg").textContent = "";
+  $("#li-pw").value = "";
+  $("#liServer").textContent = "Server: " + serverUrl().replace(/^https?:\/\//, "");
+  $("#loginKarte").classList.remove("hidden"); $("#setupKarte").classList.add("hidden");
+  show("s-login");
+  try{
+    const st = await api("/api/status");
+    if(st.setupRequired){ $("#loginKarte").classList.add("hidden"); $("#setupKarte").classList.remove("hidden"); }
+  }catch(e){ $("#liMsg").textContent = e.message; }
+}
+
+function nachAnmeldung(d){
+  kontoSetzen(d.token, d.user);
+  if(d.user.must_change_pw) return pwNeuZeigen(true);
+  toast("✓ Angemeldet als " + d.user.name);
+  show("s-start");
+}
+
+$("#liBtn").onclick = async () => {
+  const username = $("#li-user").value.trim(), password = $("#li-pw").value;
+  if(!username || !password) return $("#liMsg").textContent = "Bitte Benutzername und Passwort eingeben.";
+  $("#liBtn").disabled = true; $("#liMsg").textContent = "";
+  try{ nachAnmeldung(await api("/api/login", { method: "POST", body: { username, password, device: geraet() } })); }
+  catch(e){ $("#liMsg").textContent = e.message; }
+  finally{ $("#liBtn").disabled = false; $("#li-pw").value = ""; }
+};
+$("#li-pw").addEventListener("keydown", e => { if(e.key === "Enter") $("#liBtn").click(); });
+
+$("#suBtn").onclick = async () => {
+  const b = { code: $("#su-code").value.trim(), name: $("#su-name").value.trim(), username: $("#su-user").value.trim(),
+    password: $("#su-pw").value, device: geraet() };
+  if(!b.code || !b.name || !b.username || !b.password) return $("#suMsg").textContent = "Bitte alle Felder ausfüllen.";
+  if(b.password !== $("#su-pw2").value) return $("#suMsg").textContent = "Die Passwörter stimmen nicht überein.";
+  $("#suBtn").disabled = true; $("#suMsg").textContent = "";
+  try{
+    nachAnmeldung(await api("/api/setup", { method: "POST", body: b }));
+    ["su-code","su-pw","su-pw2"].forEach(id => $("#"+id).value = "");
+  }catch(e){ $("#suMsg").textContent = e.message; }
+  finally{ $("#suBtn").disabled = false; }
+};
+
+function pwNeuZeigen(pflicht){
+  ["pn-alt","pn-neu","pn-neu2"].forEach(id => $("#"+id).value = "");
+  $("#pnMsg").textContent = "";
+  $("#pnHinweis").textContent = pflicht
+    ? "Du hast dich mit einem Startpasswort angemeldet. Bitte lege jetzt dein eigenes Passwort fest."
+    : "Nach dem Ändern wirst du auf allen anderen Geräten abgemeldet.";
+  pwPflicht = pflicht;
+  show("s-pwneu");
+}
+let pwPflicht = false;
+$("#pnBtn").onclick = async () => {
+  const current = $("#pn-alt").value, neu = $("#pn-neu").value;
+  if(!current || !neu) return $("#pnMsg").textContent = "Bitte alle Felder ausfüllen.";
+  if(neu !== $("#pn-neu2").value) return $("#pnMsg").textContent = "Die neuen Passwörter stimmen nicht überein.";
+  $("#pnBtn").disabled = true; $("#pnMsg").textContent = "";
+  try{
+    await api("/api/me/password", { method: "POST", body: { current, new: neu } });
+    konto.user.must_change_pw = false; store.set("konto", konto);
+    pwPflicht = false;
+    toast("✓ Passwort gespeichert"); show("s-start");
+  }catch(e){ $("#pnMsg").textContent = e.message; if(!konto) show("s-login"); }
+  finally{ $("#pnBtn").disabled = false; }
+};
+
+async function abmelden(){
+  if(!confirm("Vom Startklar-Server abmelden?")) return;
+  try{ await api("/api/logout", { method: "POST" }); }catch(e){}
+  kontoWeg(); toast("Abgemeldet"); show("s-start");
+}
+
+// Beim Start: Konto still prüfen (Rolle/Name aktuell halten, gesperrte Konten abmelden). Offline bleibt alles, wie es ist.
+async function kontoPruefen(){
+  if(!konto) return;
+  try{
+    const d = await api("/api/me");
+    konto.user = d.user; store.set("konto", konto); renderKonto();
+    if(d.user.must_change_pw && cur === "s-start") pwNeuZeigen(true);
+  }catch(e){ if(e.status === 401) toast("Sitzung abgelaufen – bitte neu anmelden"); }
+}
+
+/* Benutzerverwaltung (nur Admin) */
+$("#goAdmin").onclick = () => { $("#nuErgebnis").style.display = "none"; show("s-admin"); adminLaden(); };
+function datumZeit(s){ if(!s) return "noch nie"; const d = new Date(s.replace(" ", "T") + "Z"); return isNaN(d) ? s : d.toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }); }
+function startPwZeigen(name, username, pw){
+  const k = $("#nuErgebnis");
+  k.style.display = "";
+  k.innerHTML = `<h2>✓ Zugang für ${esc(name)}</h2>
+    <p class="hint" style="margin-top:0">Bitte jetzt notieren oder weitergeben – das Startpasswort wird <b>nur dieses eine Mal</b> angezeigt.
+    Beim ersten Anmelden legt ${esc(name)} ein eigenes Passwort fest.</p>
+    <div>Benutzername:</div><div class="startpw">${esc(username)}</div>
+    <div>Startpasswort:</div><div class="startpw">${esc(pw)}</div>
+    <button type="button" class="btn sec" id="nuOk">Notiert – ausblenden</button>`;
+  $("#nuOk").onclick = () => { k.style.display = "none"; k.innerHTML = ""; };
+  k.scrollIntoView({ behavior: "smooth" });
+}
+async function adminLaden(){
+  const box = $("#adminListe");
+  try{
+    const { users } = await api("/api/users");
+    box.innerHTML = users.map(u => `<div class="au-zeile${u.active ? "" : " inaktiv"}" data-id="${u.id}">
+      <b>${esc(u.name)}</b> <span class="hint">(${esc(u.username)})</span>${u.active ? "" : " · <b>gesperrt</b>"}
+      ${u.must_change_pw ? ' · <span class="hint">Startpasswort noch nicht geändert</span>' : ""}<br>
+      <span class="hint">${u.email ? esc(u.email) + " · " : ""}zuletzt aktiv: ${esc(datumZeit(u.last_seen))}</span>
+      <div class="aktionen">
+        <select data-rolle>${Object.entries(ROLLEN).map(([k, v]) => `<option value="${k}"${k === u.role ? " selected" : ""}>${v}</option>`).join("")}</select>
+        <button type="button" class="mini" data-reset>Neues Startpasswort</button>
+        <button type="button" class="mini" data-aktiv>${u.active ? "Sperren" : "Entsperren"}</button>
+      </div></div>`).join("") || '<p class="hint">Noch keine Mitarbeiter.</p>';
+    box.querySelectorAll(".au-zeile").forEach(z => {
+      const id = z.dataset.id, u = users.find(x => String(x.id) === id);
+      z.querySelector("[data-rolle]").onchange = async e => {
+        try{ await api("/api/users/" + id, { method: "PATCH", body: { role: e.target.value } }); toast("Rolle geändert"); }
+        catch(err){ toast(err.message); }
+        adminLaden();
+      };
+      z.querySelector("[data-reset]").onclick = async () => {
+        if(!confirm(`Neues Startpasswort für ${u.name} erzeugen? Das bisherige Passwort gilt dann nicht mehr und ${u.name} wird auf allen Geräten abgemeldet.`)) return;
+        try{ const d = await api(`/api/users/${id}/reset-password`, { method: "POST" }); startPwZeigen(u.name, u.username, d.startPassword); adminLaden(); }
+        catch(err){ toast(err.message); }
+      };
+      z.querySelector("[data-aktiv]").onclick = async () => {
+        if(u.active && !confirm(`${u.name} sperren? Die Anmeldung ist dann nicht mehr möglich.`)) return;
+        try{ await api("/api/users/" + id, { method: "PATCH", body: { active: !u.active } }); toast(u.active ? "Gesperrt" : "Entsperrt"); }
+        catch(err){ toast(err.message); }
+        adminLaden();
+      };
+    });
+  }catch(e){ box.innerHTML = `<p class="hint" style="color:var(--bad)">${esc(e.message)}</p>`; if(!konto) show("s-start"); }
+}
+$("#nuBtn").onclick = async () => {
+  const b = { name: $("#nu-name").value.trim(), username: $("#nu-user").value.trim(), role: $("#nu-rolle").value, email: $("#nu-mail").value.trim() };
+  if(!b.name || !b.username) return toast("Bitte Name und Benutzername eingeben");
+  $("#nuBtn").disabled = true;
+  try{
+    const d = await api("/api/users", { method: "POST", body: b });
+    ["nu-name","nu-user","nu-mail"].forEach(id => $("#"+id).value = ""); $("#nu-rolle").value = "fahrer";
+    startPwZeigen(d.user.name, d.user.username, d.startPassword);
+    adminLaden();
+  }catch(e){ toast(e.message); }
+  finally{ $("#nuBtn").disabled = false; }
+};
+// Benutzername aus dem Namen vorschlagen: "Patrick Scheifling" → "p.scheifling"
+$("#nu-name").addEventListener("input", () => {
+  if($("#nu-user").dataset.manuell) return;
+  const t = $("#nu-name").value.trim().toLowerCase()
+    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss").split(/\s+/).filter(Boolean);
+  $("#nu-user").value = t.length > 1 ? (t[0][0] + "." + t[t.length-1]).replace(/[^a-z0-9._-]/g, "") : (t[0] || "").replace(/[^a-z0-9._-]/g, "");
+});
+$("#nu-user").addEventListener("input", () => $("#nu-user").dataset.manuell = $("#nu-user").value ? "1" : "");
 
 /* ---------- Hilfen ---------- */
 function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
@@ -3261,6 +3555,8 @@ renderFwStatus();
 syncFwReminder();
 renderZeStatus();
 renderTodoStatus();
+renderKonto();
+kontoPruefen();
 
 // Offline-Betrieb als Web-App (iPhone); in der Android-App nicht nötig
 if("serviceWorker" in navigator && !window.Android && /^https:|^http:\/\/localhost/.test(location.href)){
