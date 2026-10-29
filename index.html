@@ -19,7 +19,7 @@
    KONFIGURATION – hier die festen Werte für den Betrieb eintragen
    ============================================================ */
 // Wird beim Bauen (build-apk.ps1 / build-web.ps1) automatisch durch die Versionsnummer ersetzt
-const APP_VERSION = "1.9";
+const APP_VERSION = "1.9.1";
 const CONFIG = {
   firma:      "AS Logistik",
   empfaenger: "fuhrpark@aslogistik-lu.com",  // feste Empfängeradresse
@@ -2353,7 +2353,13 @@ function isoPlusMonate(iso, m){ const [y, mo, t] = iso.split("-").map(Number); c
 const tageBis = iso => Math.round((Date.parse(iso + "T00:00:00Z") - Date.parse(isoHeute() + "T00:00:00Z")) / 86400000);
 const fmtIso = iso => iso.split("-").reverse().join(".");
 // 0 = gültig, 1 = läuft innerhalb der Vorlaufzeit ab, 2 = abgelaufen
-function fwStatus(iso, vorlauf){ const h = isoHeute(); return iso < h ? 2 : iso <= isoPlusMonate(h, vorlauf) ? 1 : 0; }
+// Eigene Vorwarnzeit (in Tagen) für einzelne Fristen – alle anderen nutzen die eingestellte Vorlaufzeit in Monaten
+const FW_VORWARNUNG_TAGE = { "Führerscheinkontrolle": 7 };
+function isoPlusTage(iso, n){ const [y, m, t] = iso.split("-").map(Number); const d = new Date(y, m - 1, t + n);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+// Ab diesem Tag gilt eine Frist als "läuft bald ab"
+const fwFaelligAb = (iso, vorlauf, art) => art in FW_VORWARNUNG_TAGE ? isoPlusTage(iso, -FW_VORWARNUNG_TAGE[art]) : isoPlusMonate(iso, -vorlauf);
+function fwStatus(iso, vorlauf, art){ const h = isoHeute(); return iso < h ? 2 : h >= fwFaelligAb(iso, vorlauf, art) ? 1 : 0; }
 const fwStatusText = st => st === 2 ? "ABGELAUFEN" : st === 1 ? "läuft bald ab" : "ok";
 const fwName = (typ, o) => typ === "fz" ? `${o.kennzeichen} (${o.typ})` : `${o.nachname}, ${o.vorname}`;
 
@@ -2361,7 +2367,7 @@ function fwListe(d, alle){
   const l = [];
   const add = (kat, typ, o) => Object.entries(o.fristen || {}).forEach(([art, iso]) => {
     if(!iso) return;
-    const st = fwStatus(iso, d.vorlauf);
+    const st = fwStatus(iso, d.vorlauf, art);
     if(alle || st > 0) l.push({ kat, obj: fwName(typ, o), art, iso, tage: tageBis(iso), st });
   });
   d.fahrzeuge.forEach(o => add("Fahrzeug", "fz", o));
@@ -2439,7 +2445,7 @@ function fwRender(){
     const w = $(fz ? "#fwListeFz" : "#fwListeFa");
     w.innerHTML = liste.length ? "" : `<p class="hint" style="margin:0">${q ? "Nichts gefunden." : fz ? "Noch keine Fahrzeuge erfasst." : "Noch keine Fahrer erfasst."}</p>`;
     liste.forEach(o => {
-      const st = Object.values(o.fristen || {}).filter(Boolean).map(iso => fwStatus(iso, d.vorlauf));
+      const st = Object.entries(o.fristen || {}).filter(([, iso]) => iso).map(([art, iso]) => fwStatus(iso, d.vorlauf, art));
       const n2 = st.filter(x => x === 2).length, n1 = st.filter(x => x === 1).length;
       const b = document.createElement("button"); b.type = "button"; b.className = "fw-item";
       b.innerHTML = `<b>${esc(fz ? o.kennzeichen : o.nachname + ", " + o.vorname)}</b>
@@ -2485,7 +2491,8 @@ function fwBearbeiten(typ, o){
   const vorlauf = fwDaten().vorlauf;
   $("#fwEditFristen").innerHTML = (typ === "fz" ? FW_FAHRZEUG : FW_FAHRER).map((art, i) => {
     const iso = o.fristen[art] || "", monat = fwNurMonat(art);
-    return `<div class="fw-frist${iso ? " st" + fwStatus(iso, vorlauf) : ""}"><label for="fwf-${i}">${esc(art)}${monat ? ' <span class="hint">(MM/JJJJ)</span>' : ""}</label>
+    return `<div class="fw-frist${iso ? " st" + fwStatus(iso, vorlauf, art) : ""}"><label for="fwf-${i}">${esc(art)}${monat ? ' <span class="hint">(MM/JJJJ)</span>' : ""}${
+        art in FW_VORWARNUNG_TAGE ? ` <span class="hint">(Vorwarnung ${FW_VORWARNUNG_TAGE[art] === 7 ? "1 Woche" : FW_VORWARNUNG_TAGE[art] + " Tage"})</span>` : ""}</label>
       <input type="${monat ? "month" : "date"}" id="fwf-${i}" data-art="${esc(art)}" value="${monat ? iso.slice(0, 7) : iso}"${monat ? ' placeholder="JJJJ-MM"' : ""}></div>`;
   }).join("");
   $("#fwLoeschen").classList.toggle("hidden", neu);
@@ -2694,7 +2701,7 @@ function syncFwReminder(){
     const d = fwDaten();
     // Ab diesem Tag gilt eine Frist als fällig (Ablaufdatum minus Vorlaufzeit)
     const ab = [];
-    [...d.fahrzeuge, ...d.fahrer].forEach(o => Object.values(o.fristen || {}).forEach(iso => { if(iso) ab.push(isoPlusMonate(iso, -d.vorlauf)); }));
+    [...d.fahrzeuge, ...d.fahrer].forEach(o => Object.entries(o.fristen || {}).forEach(([art, iso]) => { if(iso) ab.push(fwFaelligAb(iso, d.vorlauf, art)); }));
     Android.setFristen(ab.join(","), d.tag);
   }catch(e){}
 }

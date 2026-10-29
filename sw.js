@@ -1,5 +1,5 @@
 ﻿// Offline-Speicher der App. Bei jeder neuen Version VERSION erhöhen (macht build-web.ps1 automatisch).
-const VERSION = "fk-1.9-20261029104831";
+const VERSION = "fk-1.9.1-20261029110223";
 const FILES = ["./", "index.html", "jspdf.umd.min.js", "logo.js", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
