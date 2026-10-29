@@ -18,6 +18,8 @@
 /* ============================================================
    KONFIGURATION – hier die festen Werte für den Betrieb eintragen
    ============================================================ */
+// Wird beim Bauen (build-apk.ps1 / build-web.ps1) automatisch durch die Versionsnummer ersetzt
+const APP_VERSION = "1.8";
 const CONFIG = {
   firma:      "AS Logistik",
   empfaenger: "fuhrpark@aslogistik-lu.com",  // feste Empfängeradresse
@@ -198,6 +200,7 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
       <h2>Letzte Einträge auf diesem Gerät</h2>
       <div id="history"><p class="hint">Noch keine Einträge.</p></div>
     </div>
+    <p class="hint" id="appVersion" style="text-align:center"></p>
   </section>
 
   <!-- FAHRZEUGKONTROLLE -->
@@ -625,7 +628,7 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
       <div class="ze-tage" id="zc-tage"></div>
       <div class="row">
         <div><label for="zc-beginn">Erfassung ab (Soll zählt ab)</label><input id="zc-beginn" type="date"></div>
-        <div><label for="zc-land">Feiertage</label><select id="zc-land"><option value="LU">Luxemburg</option><option value="DE">Deutschland (bundesweit)</option></select></div>
+        <div><label for="zc-land">Feiertage</label><select id="zc-land"><option value="DE-RP">Deutschland + Rheinland-Pfalz</option><option value="DE">Deutschland (nur bundesweit)</option><option value="LU">Luxemburg</option></select></div>
       </div>
       <label for="zc-mail">Empfänger für Urlaub / Krank / Monatsbericht</label>
       <input id="zc-mail" type="email" placeholder="leer = Empfänger von oben">
@@ -1240,7 +1243,12 @@ function tageVonBis(von, bis){ const out = [], d = new Date(von + "T12:00:00"), 
 const monatVon = (m, n) => { const [y, mo] = m.split("-").map(Number); const d = new Date(y, mo - 1 + n, 1); return d.getFullYear() + "-" + pad2(d.getMonth() + 1); };
 const monatText = m => new Date(m + "-15T12:00:00").toLocaleDateString("de-DE", { month: "long", year: "numeric" });
 
-const zeCfg = () => Object.assign({ std: 40, urlaub: 26, tage: [1, 2, 3, 4, 5], beginn: null, land: "LU", mail: "" }, store.get("zeCfg", {}));
+function zeCfg(){
+  const s = store.get("zeCfg", {});
+  // Bis Version 1.7 wurde "LU" automatisch gespeichert – nur eine bewusst gewählte Einstellung behalten
+  if(s.land === "LU" && !s.landGewaehlt) delete s.land;
+  return Object.assign({ std: 40, urlaub: 26, tage: [1, 2, 3, 4, 5], beginn: null, land: "DE-RP", mail: "" }, s);
+}
 const zeDaten = () => Object.assign({ entries: [], absences: [], log: [] }, store.get("ze", {}));
 function zeSpeichernDaten(d, aktion, details){
   if(aktion) d.log.push({ ts: new Date().toISOString(), aktion, details: details || null });
@@ -1267,7 +1275,9 @@ function feiertage(y){
        [fix(12,25),"1. Weihnachtstag"],[fix(12,26),"2. Weihnachtstag"]]
     : [[fix(1,1),"Neujahr"],[rel(-2),"Karfreitag"],[rel(1),"Ostermontag"],[fix(5,1),"Tag der Arbeit"],[rel(39),"Christi Himmelfahrt"],
        [rel(50),"Pfingstmontag"],[fix(10,3),"Tag der Deutschen Einheit"],[fix(12,25),"1. Weihnachtstag"],[fix(12,26),"2. Weihnachtstag"]];
-  return feiertagCache[key] = new Map(l);
+  // Rheinland-Pfalz: zusätzlich zu den bundesweiten Feiertagen
+  if(land === "DE-RP") l.push([rel(60), "Fronleichnam"], [fix(11,1), "Allerheiligen"]);
+  return feiertagCache[key] = new Map(l.sort((a, b) => a[0].localeCompare(b[0])));
 }
 const feiertag = date => feiertage(+date.slice(0, 4)).get(date) || null;
 const arbeitstageZaehlen = (von, bis) => { const t = zeCfg().tage; return tageVonBis(von, bis).filter(d => t.includes(wochentag(d)) && !feiertag(d)).length; };
@@ -1330,8 +1340,8 @@ function renderZeStatus(){
 let zeTab = "uhr", zeMonat = ymd(new Date()).slice(0, 7), zeJahr = new Date().getFullYear();
 $("#goZe").onclick = () => zeZeigen("uhr");
 function zeZeigen(tab){
-  const cfg = zeCfg();
-  if(!cfg.beginn){ cfg.beginn = isoHeute(); store.set("zeCfg", cfg); }   // Soll zählt ab erster Nutzung
+  // Soll zählt ab erster Nutzung (nur den Beginn speichern, keine Standardwerte festschreiben)
+  if(!zeCfg().beginn) store.set("zeCfg", Object.assign(store.get("zeCfg", {}), { beginn: isoHeute() }));
   show("s-ze");
   zeTab = tab || zeTab;
   document.querySelectorAll("#zeTabs button").forEach(b => b.classList.toggle("on", b.dataset.zetab === zeTab));
@@ -1663,7 +1673,7 @@ $("#zcSpeichern").onclick = () => {
   if(!(urlaub >= 0 && urlaub <= 60)) return toast("Urlaubstage zwischen 0 und 60");
   if(!tage.length) return toast("Mindestens einen Arbeitstag wählen");
   if(mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return toast("Bitte gültige E-Mail-Adresse eingeben");
-  store.set("zeCfg", Object.assign(zeCfg(), { std, urlaub, tage, beginn: $("#zc-beginn").value || null, land: $("#zc-land").value, mail }));
+  store.set("zeCfg", Object.assign(zeCfg(), { std, urlaub, tage, beginn: $("#zc-beginn").value || null, land: $("#zc-land").value, landGewaehlt: true, mail }));
   Object.keys(feiertagCache).forEach(k => delete feiertagCache[k]);
   toast("Vorgaben gespeichert");
 };
@@ -1826,10 +1836,11 @@ $("#tkSpeichern").onclick = () => {
 const FW_SALT = "fahrer-app-fw:";
 const FW_STANDARD_HASH = "ab8c87519c01e9b486c112dd058e6b503b17a148059d8b4bd13706ce50f54c4d";
 const FW_FAHRZEUG = ["HU / TÜV / Contrôle technique", "SP Sicherheitsprüfung (LKW/Anh.)", "Tachograph-Prüfung (LKW)",
-  "Versicherung", "Leasingende", "UVV-Prüfung", "Feuerlöscher-Prüfung", "Wartung / Inspektion"];
+  "Versicherung", "Leasingende", "UVV-Prüfung", "Feuerlöscher-Prüfung", "Verbandkasten (Ablaufdatum)",
+  "ADR: Augenspülflasche", "ADR: Maske", "ADR: Filter", "Wartung / Inspektion"];
 const FW_FAHRER = ["Führerschein (Dokument)", "Führerschein Klasse C/CE", "Personalausweis", "Fahrerqualifizierung (Code 95)",
   "Gefahrgutschein (ADR)", "Fahrerkarte (Tacho)", "Führerscheinkontrolle", "Aufenthaltstitel", "Reisepass"];
-const FW_TYPEN = ["PKW", "LKW", "Anhänger", "Sonstiges"];
+const FW_TYPEN = ["PKW", "Sprinter/Transporter", "LKW", "Anhänger", "Sonstiges"];
 const WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 let fwTab = "uebersicht", fwEdit = null;
 
@@ -2555,6 +2566,8 @@ let tt;
 function toast(msg){ document.querySelectorAll(".toast").forEach(t => t.remove()); const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); clearTimeout(tt); tt = setTimeout(() => t.remove(), 3500); }
 
 $("#logo").src = LOGO;
+$("#appVersion").textContent = "Startklar " + (APP_VERSION.startsWith("__") ? "(Testversion)" : "Version " + APP_VERSION) +
+  (window.Android ? " · Android" : " · Web/iPhone");
 renderHistory();
 renderFsStatus();
 syncFsReminder();
