@@ -1,0 +1,21 @@
+﻿Startklar – Update auf Version 1.9 (29.10.2026)
+
+Neue Checklisten PKW/LKW, Suche in der Checkliste, Ablaufdaten in der Führerscheinkontrolle
+
+Für Fahrer:
+• Abfahrtskontrolle, Übergabe und Übernahme: zuerst PKW oder LKW wählen – danach erscheint die passende, ausführliche Checkliste.
+• Anhänger-Punkte erscheinen nur, wenn das Feld „Kennzeichen Anhänger“ ausgefüllt ist.
+• Winter-Punkte erscheinen von Oktober bis April, Sommer-Punkte von Mai bis September.
+• Neue Suche über der Checkliste: z. B. „Reifen“ oder „Spiegel“ eingeben – nur passende Punkte werden angezeigt.
+• „Nur offene Punkte“ zeigt, was noch fehlt. „Alle offenen Punkte auf OK“ hakt nach Rückfrage alle offenen Punkte ab – bitte nur nach echter Prüfung!
+• LKW-Abfahrtskontrolle: neue Felder „Abfahrtsort / Ziel“ und „Ladung / Gewicht“.
+• Führerscheinkontrolle: zu jedem Dokument das Ablaufdatum eintragen (vom Vormonat vorausgefüllt). Abgelaufene Dokumente werden rot gemeldet.
+
+Fürs Büro / Fuhrpark:
+• Checklisten stammen aus den Vorlagen „Abfahrtskontrolle LKW mit Anhänger“ und „Abfahrtskontrolle PKW“.
+• Fristenwächter: HU, SP, UVV, Feuerlöscher und ADR-Ausrüstung werden nur noch mit Monat/Jahr (MM/JJJJ) geführt – gültig bis Monatsende.
+• Fristenwächter → Fahrer → „Aus Führerscheinkontrolle übernehmen“: Mail-Text einfügen, Abweichungen werden angezeigt und erst nach Anhaken und Bestätigung übernommen.
+• Mails der Führerscheinkontrolle mit abgelaufenen Dokumenten tragen im Betreff „– ABGELAUFEN“.
+
+Update: Android - Startklar-1.9.apk antippen und „Aktualisieren“ wählen. iPhone - App mit Internet öffnen, schließen, erneut öffnen.
+Kontrolle: unten auf der Startseite steht „Startklar Version 1.9“.

@@ -19,7 +19,7 @@
    KONFIGURATION – hier die festen Werte für den Betrieb eintragen
    ============================================================ */
 // Wird beim Bauen (build-apk.ps1 / build-web.ps1) automatisch durch die Versionsnummer ersetzt
-const APP_VERSION = "1.8";
+const APP_VERSION = "1.9";
 const CONFIG = {
   firma:      "AS Logistik",
   empfaenger: "fuhrpark@aslogistik-lu.com",  // feste Empfängeradresse
@@ -109,7 +109,7 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
 .slot.has{border-style:solid;border-color:var(--ok)}
 .slot.has span{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:3px}
 .slot.missing{border-color:var(--bad);color:var(--bad)}
-#fsAdrCard.missing h2,#fsKlasseCard.missing h2{color:var(--bad)}
+#fsAdrCard.missing h2,#fsKlasseCard.missing h2,#fzTypCard.missing h2{color:var(--bad)}
 /* Notdienst: roter Knopf mit "Blaulicht" */
 .big.notdienst{background:var(--bad);border-color:var(--bad)}
 .big.notdienst b,.big.notdienst span{color:#fff!important}
@@ -118,6 +118,23 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
 @media (prefers-reduced-motion: reduce){.blaulicht{animation:none}}
 #ndArtCard.missing h2,#ndBeschrCard.missing h2,#ndWfCard.missing h2,#ndMediaCard.missing h2{color:var(--bad)}
 .vid{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-top:8px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+/* Suche in der Checkliste (bleibt beim Scrollen unter der Kopfleiste stehen) */
+.suche{position:sticky;top:var(--kopf,56px);z-index:4;background:var(--bg);padding:8px 0 10px;margin-bottom:4px}
+.suche-feld{position:relative}
+.suche-feld input{padding-right:40px;background:var(--card);border-width:1.5px}
+.suche-feld button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:0;border-radius:50%;background:var(--na-bg);color:var(--text);font-size:18px;cursor:pointer}
+.suche-info{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--muted)}
+.suche-offen{display:flex;align-items:center;gap:6px;margin:0;color:var(--text);font-size:14px}
+.suche-offen input{width:18px;height:18px;margin:0}
+mark{background:#fff3a0;color:inherit;border-radius:3px;padding:0 1px}
+/* Ablaufdaten in der Führerscheinkontrolle / Übernahme in den Fristenwächter */
+.fs-frist{border-top:1px solid var(--line);margin-top:12px;padding-top:8px}
+.fs-frist.missing label{color:var(--bad)}
+.fs-frist .fs-status{margin-top:4px}
+.fwi-zeile{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;border-top:1px solid var(--line);padding:10px 0;font-size:14px}
+.fwi-zeile:first-of-type{border-top:0}
+.fwi-zeile input{width:22px;height:22px;margin:0}
+.fwi-zeile .neu{font-weight:600}
 /* Zeiterfassung */
 .tabs.three{grid-template-columns:1fr 1fr 1fr}
 .ze-uhr{text-align:center}
@@ -437,7 +454,8 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
     </div>
 
     <div data-pane="fahrer" class="hidden">
-      <button class="btn" type="button" id="fwNeuFa">+ Neuer Fahrer</button>
+      <button class="btn" type="button" id="fwImportBtn">📥 Aus Führerscheinkontrolle übernehmen</button>
+      <button class="btn sec" type="button" id="fwNeuFa">+ Neuer Fahrer</button>
       <input id="fwSucheFa" placeholder="Suche Name, Personalnummer …" style="margin:12px 0">
       <div class="card" id="fwListeFa"></div>
     </div>
@@ -469,6 +487,18 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
       </div>
       <button class="btn sec" type="button" id="fwLogout">Abmelden</button>
     </div>
+  </section>
+
+  <!-- FRISTENWÄCHTER: Daten aus Führerscheinkontrolle übernehmen -->
+  <section id="s-fw-import" class="hidden">
+    <div class="card">
+      <h2>Mail-Text einfügen</h2>
+      <p class="hint" style="margin-top:0">Die Mail „Führerscheinkontrolle …“ öffnen, den <b>ganzen Text markieren und kopieren</b> und hier einfügen.
+        Es können auch mehrere Mails hintereinander eingefügt werden.</p>
+      <textarea id="fwi-text" style="min-height:120px" placeholder="Mail-Text hier einfügen …"></textarea>
+      <button class="btn" type="button" id="fwiPruefen">Abweichungen anzeigen</button>
+    </div>
+    <div id="fwiErgebnis"></div>
   </section>
 
   <!-- FRISTENWÄCHTER: Bearbeiten -->
@@ -518,6 +548,14 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
   <!-- FORMULAR -->
   <section id="s-form" class="hidden">
     <div id="prevInfo" class="banner hidden"></div>
+    <div class="card hidden" id="fzTypCard">
+      <h2>Fahrzeugart*</h2>
+      <div class="seg two">
+        <button type="button" data-fztyp="PKW">🚗 PKW</button>
+        <button type="button" data-fztyp="LKW">🚛 LKW</button>
+      </div>
+      <p class="hint" style="margin-bottom:0">Die Checkliste passt sich an. Anhänger-Punkte erscheinen nur, wenn ein Anhänger-Kennzeichen eingetragen ist.</p>
+    </div>
     <div class="card">
       <h2>Fahrzeug &amp; Fahrer</h2>
       <label for="f-fahrer">Fahrer (Name)*</label>
@@ -529,6 +567,10 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
       <div class="row">
         <div><label for="f-km">Kilometerstand*</label><input id="f-km" inputmode="numeric"></div>
         <div><label for="f-zeit">Datum / Uhrzeit</label><input id="f-zeit" type="datetime-local"></div>
+      </div>
+      <div id="lkwFields" class="hidden">
+        <label for="f-ziel">Abfahrtsort / Ziel</label><input id="f-ziel">
+        <label for="f-ladung">Art der Ladung / Gewicht</label><input id="f-ladung" placeholder="z.B. 22 Paletten Getränke, 18 t">
       </div>
       <div id="mangelFields" class="hidden">
         <label for="f-ort">Standort des Fahrzeugs</label>
@@ -552,6 +594,17 @@ pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,Consolas,monospace;backgroun
       </div>
     </div>
 
+    <div class="suche hidden" id="checkSuche">
+      <div class="suche-feld">
+        <input id="ck-suche" type="search" placeholder="🔍 Prüfpunkt suchen, z.B. Reifen, Spiegel, ADR …" autocomplete="off" enterkeyhint="search">
+        <button type="button" id="ck-leeren" class="hidden" aria-label="Suche löschen">×</button>
+      </div>
+      <div class="suche-info">
+        <label class="suche-offen"><input type="checkbox" id="ck-offen"> Nur offene Punkte</label>
+        <span id="ck-info"></span>
+      </div>
+      <button type="button" class="btn sec small" id="ck-alleok" style="width:100%;margin-top:8px">✓ Alle offenen Punkte auf OK</button>
+    </div>
     <div id="checklist"></div>
 
     <div class="card">
@@ -657,39 +710,352 @@ const store = {
 const settings = () => Object.assign({}, CONFIG, store.get("settings", {}));
 
 /* ---------- Checklisten ---------- */
-const BASE = [
-  { titel: "Fahrzeug außen", punkte: [
-    "Beleuchtung, Blinker, Bremslichter",
-    "Reifen (Profil, Luftdruck, Beschädigungen)",
-    "Räder / Radmuttern",
-    "Spiegel",
-    "Scheiben & Scheibenwischer",
-    "Karosserie / Aufbau ohne neue Schäden",
-    "Kennzeichen sauber & lesbar"
-  ]},
-  { titel: "Technik", punkte: [
-    "Bremsanlage / Druckluft",
-    "Lenkung",
-    "Motoröl & Kühlmittel",
-    "Keine Warnleuchten im Display",
-    "Keine Undichtigkeiten (Öl, Diesel, Luft)",
-    "Hupe"
-  ]},
-  { titel: "Ausrüstung & Papiere", punkte: [
-    "Warndreieck & Warnleuchte",
-    "Warnwesten",
-    "Verbandkasten",
-    "Feuerlöscher (Prüfdatum)",
-    "Unterlegkeile",
-    "Fahrzeugpapiere",
-    "Fahrerkarte / Tachograph"
-  ]},
-  { titel: "Ladung & Anhänger", punkte: [
-    "Ladungssicherungsmittel (Gurte, Netze)",
-    "Türen / Plane / Bordwände",
-    "Kupplung / Anhänger richtig verbunden"
-  ]}
+/* Checklisten Abfahrtskontrolle (aus "Abfahrtskontrolle LKW mit Anhänger.docx" und "Abfahrtskontrolle PKW.docx")
+   anh: nur wenn ein Anhänger-Kennzeichen eingetragen ist · saison: nur im Winter (Okt–Apr) bzw. Sommer (Mai–Sep) */
+const A = t => ({ t, anh: true });
+const CHECK_LKW = [
+  { titel: "1. Fahrer", punkte: [
+    "Fahrtüchtig: ausgeruht, nicht krank, kein Alkohol, keine Medikamente mit Fahreinschränkung",
+    "Lenk- und Ruhezeiten eingehalten, Tagesruhezeit erfüllt",
+    "Brille / Kontaktlinsen dabei, falls im Führerschein eingetragen",
+    "Geeignete Arbeitskleidung, Sicherheitsschuhe"]},
+  { titel: "1. Persönliche Dokumente", punkte: [
+    "Führerschein mit passender Klasse (C/CE)",
+    "Fahrerqualifizierungsnachweis (Schlüsselzahl 95, Ablaufdatum prüfen)",
+    "Fahrerkarte eingesteckt, gültig, Ländercode/Ortseingabe erledigt",
+    "Personalausweis / Reisepass",
+    "Bescheinigung über berücksichtigungsfreie Tage (falls erforderlich)",
+    "ADR-Schulungsbescheinigung (nur bei Gefahrgut)"]},
+  { titel: "1. Fahrzeugdokumente", punkte: [
+    "Zulassungsbescheinigung Teil I Zugfahrzeug",
+    A("Zulassungsbescheinigung Teil I Anhänger"),
+    "HU- und SP-Prüffristen auf Plaketten und Prüfbuch gültig (Zugfahrzeug und Anhänger)",
+    "Tachograf-Prüfung (alle 2 Jahre) gültig, Einbauschild vorhanden",
+    "Versicherungsnachweis / Grüne Karte (Ausland)",
+    "Gemeinschaftslizenz / Erlaubnis (beglaubigte Abschrift) im Fahrzeug",
+    "Ausnahmegenehmigungen (Überbreite, Überlänge, Sonntagsfahrverbot) falls nötig",
+    "Mautgerät (OBU) funktionsfähig, Achszahl/Gewichtsklasse richtig eingestellt",
+    "Tankkarte, Unfallbericht, Notfallnummern der Disposition"]},
+  { titel: "1. Ladungspapiere", punkte: [
+    "Lieferschein / CMR-Frachtbrief vollständig ausgefüllt",
+    "Beförderungspapier, schriftliche Weisungen (nur ADR)",
+    "Zollpapiere (bei Grenzüberschreitung außerhalb der EU)",
+    "Wiegenachweis bei Containern (falls gefordert)"]},
+  { titel: "1. Ausrüstung im Fahrzeug", punkte: [
+    "Warndreieck (bei Gespannen empfohlen: zwei)",
+    "Warnleuchte (Pflicht über 3,5 t)",
+    "Warnwesten für alle Insassen, griffbereit",
+    "Verbandkasten nach DIN 13164, Verfallsdatum prüfen",
+    "Feuerlöscher (bei ADR vorgeschrieben), Prüfplakette gültig",
+    "Unterlegkeile: mindestens einer am LKW, einer am Anhänger (über 4 t zGM)",
+    "Taschenlampe, Arbeitshandschuhe",
+    "Ersatzlampen und Sicherungen",
+    "Bordwerkzeug, Radmutterschlüssel, Wagenheber",
+    "Ersatzrad bzw. Reifendichtmittel (falls vorhanden)",
+    "Schneeketten im Winter (bei Bedarf und Ausland)",
+    "ADR-Ausrüstung (Augenspülflüssigkeit, Schaufel, Kanalabdeckung, Auffangbehälter) nur bei Gefahrgut"]},
+  { titel: "2. Allgemeiner Zustand Zugfahrzeug", punkte: [
+    "Fahrzeug steht gerade, keine Schieflage (Hinweis auf Luftfederung- oder Reifendefekt)",
+    "Keine Flüssigkeitslachen unter dem Fahrzeug (Öl, Kühlmittel, Diesel, AdBlue, Hydraulik)",
+    "Keine neuen Beschädigungen an Kabine, Aufbau, Stoßfänger, Unterfahrschutz",
+    "Kennzeichen vorn und hinten vorhanden, sauber, lesbar, fest",
+    "Konturmarkierung und Kennzeichnung (z. B. \"Toter Winkel\"-Aufkleber in FR, Langsamfahrzeug-Schild falls nötig) vorhanden",
+    "Umweltplakette, Mautvignette (falls nötig) angebracht"]},
+  { titel: "2. Scheiben, Spiegel, Kameras", punkte: [
+    "Frontscheibe ohne Risse oder Steinschläge im Sichtfeld",
+    "Seitenscheiben sauber, frei von Aufklebern im Sichtbereich",
+    "Alle Spiegel vorhanden, fest, sauber, unbeschädigt: Haupt-, Weitwinkel-, Rampen- und Frontspiegel",
+    "Spiegel richtig eingestellt (vom Fahrersitz prüfen)",
+    "Kamera- / Abbiegeassistent-Linsen und Sensoren sauber",
+    "Scheibenwischerblätter intakt, nicht rissig"]},
+  { titel: "2. Beleuchtung Zugfahrzeug", punkte: [
+    "Abblendlicht, Fernlicht, Standlicht",
+    "Nebelscheinwerfer, Nebelschlussleuchte",
+    "Blinker vorn, seitlich, hinten; Warnblinkanlage",
+    "Bremsleuchten, Schlussleuchten, Rückfahrscheinwerfer",
+    "Begrenzungs- und Umrissleuchten, seitliche Markierungsleuchten",
+    "Kennzeichenbeleuchtung",
+    "Arbeitsscheinwerfer, Rundumkennleuchte (falls vorhanden)",
+    "Streuscheiben unbeschädigt, sauber; Rückstrahler vollständig"]},
+  { titel: "2. Reifen und Räder (jedes Rad einzeln)", punkte: [
+    "Profiltiefe: gesetzlich mind. 1,6 mm, empfohlen 3 mm (Winter mind. 4 mm, Lenkachse)",
+    "Reifendruck nach Herstellerangabe, kalt gemessen",
+    "Keine Schnitte, Beulen, Risse, Fremdkörper, freiliegende Karkasse",
+    "Gleichmäßiges Abnutzungsbild (kein einseitiger Verschleiß)",
+    "Zwillingsräder: kein Stein oder Fremdkörper zwischen den Reifen, Räder berühren sich nicht",
+    "Winterreifen (M+S / Alpine-Symbol) bei winterlichen Verhältnissen, an Antriebs- und Lenkachse",
+    "Ventilkappen vorhanden, Ventilverlängerungen fest",
+    "Radmuttern vollzählig und fest, Radmutternindikatoren in Reihe, keine Rostspuren um die Muttern",
+    "Felgen ohne Risse oder Verformung",
+    "Radnaben dicht, kein Fett- oder Ölaustritt"]},
+  { titel: "2. Fahrwerk und Unterbau", punkte: [
+    "Federn / Blattfedern nicht gebrochen, Federbriden fest",
+    "Luftfederbälge ohne Risse, gleichmäßig gefüllt",
+    "Stoßdämpfer dicht, Befestigung in Ordnung",
+    "Bremsleitungen und -schläuche ohne Scheuerstellen, keine hörbaren Luftverluste",
+    "Kotflügel, Spritzschutzlappen vorhanden und fest",
+    "Seitlicher Unterfahrschutz und hinterer Unterfahrschutz vorhanden, fest",
+    "Auspuffanlage fest, keine Lecks"]},
+  { titel: "2. Tank und Kraftstoffanlage", punkte: [
+    "Dieseltank ausreichend gefüllt, Tankdeckel geschlossen und abgeschlossen",
+    "AdBlue-Tank ausreichend gefüllt, Deckel geschlossen",
+    "Tanks und Leitungen dicht, Tankhalterungen fest"]},
+  { titel: "2. Aufbau, Kabine", punkte: [
+    "Kabine verriegelt (Kippkabine eingerastet)",
+    "Trittstufen und Haltegriffe fest, rutschfest, sauber",
+    "Staukästen geschlossen und verriegelt",
+    "Windabweiser / Spoiler fest"]},
+  { titel: "3. Motorraum und Flüssigkeiten", hinweis: "Bei stehendem Motor und waagerechtem Fahrzeug prüfen; Kabine nur bei gesichertem Umfeld kippen.", punkte: [
+    "Motorölstand zwischen Min. und Max. (Messstab oder Bordcomputer)",
+    "Kühlmittelstand im Ausgleichsbehälter, Frostschutz ausreichend",
+    "Scheibenwaschwasser gefüllt, im Winter mit Frostschutz",
+    "Lenkhydrauliköl (Servoöl) auf Sollstand",
+    "Kupplungsflüssigkeit (bei Schaltgetriebe) auf Sollstand",
+    "Keilrippenriemen ohne Risse, ausreichend gespannt",
+    "Schläuche und Leitungen dicht, keine Scheuerstellen",
+    "Batterie fest, Pole sauber, Abdeckung vorhanden",
+    "Luftfilter-Wartungsanzeige nicht im roten Bereich",
+    "Kein Marderbiss, keine losen Kabel",
+    "Kabine wieder ordnungsgemäß abgesenkt und verriegelt"]},
+  { titel: "4. Sitz und Sicht", punkte: [
+    "Fahrersitz eingestellt, Lenkrad verstellt und arretiert",
+    "Sicherheitsgurte funktionieren, rollen auf, rasten ein",
+    "Keine losen Gegenstände im Fußraum oder auf dem Armaturenbrett",
+    "Frontscheibe innen sauber und beschlagfrei",
+    "Navi und Handyhalterung außerhalb des Sichtfelds und Airbag-Bereichs"]},
+  { titel: "4. Tachograf", punkte: [
+    "Fahrerkarte eingesteckt, manuelle Nachträge erledigt",
+    "Uhrzeit (UTC) und Datum korrekt",
+    "Ausreichend Druckerpapier vorhanden",
+    "Keine Fehlermeldung im Display"]},
+  { titel: "4. Bedienelemente und Instrumente (Zündung an)", punkte: [
+    "Kontrollleuchten-Test beim Einschalten: alle Lampen leuchten kurz auf",
+    "Nach dem Start keine Warn- oder Fehlermeldungen (rot = nicht abfahren)",
+    "Hupe funktioniert",
+    "Scheibenwischer alle Stufen, Waschanlage spritzt auf die Scheibe",
+    "Heizung, Gebläse, Klimaanlage, Defroster",
+    "Innenbeleuchtung, Instrumentenbeleuchtung",
+    "Tempomat, Abstandsregler, Spurhalteassistent aktiv bzw. betriebsbereit",
+    "Notbremsassistent und Abbiegeassistent aktiv",
+    "Retarder / Motorbremse schaltet",
+    "Kraftstoff- und AdBlue-Anzeige plausibel"]},
+  { titel: "4. Druckluft-Bremsanlage", punkte: [
+    "Vorratsdruck in beiden Kreisen aufgebaut (in der Regel ca. 8,5–10 bar, Herstellerangabe beachten)",
+    "Warnleuchte für zu niedrigen Druck erlischt beim Druckaufbau",
+    "Druckverlust bei stehendem Motor und gelöster Bremse: max. ca. 0,3 bar in 10 Minuten (Herstellerangabe beachten)",
+    "Druckabfall bei Vollbremsung im zulässigen Bereich",
+    "Feststellbremse rastet ein, Kontrollleuchte leuchtet",
+    "EBS- und ABS-Kontrollleuchten nach Fahrtbeginn aus"]},
+  { titel: "4. Lenkung", punkte: [
+    "Lenkspiel nicht übermäßig",
+    "Lenkung leichtgängig von Anschlag zu Anschlag, keine Geräusche"]},
+  { titel: "5. Kupplung: Deichselanhänger (Bolzen- oder Maulkupplung)", anh: true, hinweis: "Bei Sattelauflieger: „n. z.“ wählen.", punkte: [
+    "Kupplungsbolzen vollständig eingefahren und verriegelt",
+    "Sicherungs- bzw. Kontrollstift sichtbar in Position \"geschlossen\"",
+    "Zugöse sitzt korrekt im Kupplungsmaul, kein übermäßiges Spiel",
+    "Zugöse und Buchse nicht ausgeschlagen (Verschleißgrenze)",
+    "Zugdeichsel ohne Risse, Verformung, Schweißnahtschäden",
+    "Deichselhöhe passt (Anhänger waagerecht)",
+    "Kupplung geschmiert, Befestigung am Rahmen fest"]},
+  { titel: "5. Kupplung: Sattelauflieger (Sattelkupplung)", anh: true, hinweis: "Bei Deichselanhänger: „n. z.“ wählen.", punkte: [
+    "Kupplungsplatte geschmiert, unbeschädigt",
+    "Verriegelung geschlossen, Kupplungshebel in Endstellung",
+    "Sicherungsbügel bzw. Klappe eingelegt",
+    "Kein Spalt zwischen Kupplungsplatte und Aufliegerplatte (Sichtkontrolle)",
+    "Königszapfen sitzt in der Verriegelung (mit Taschenlampe kontrollieren)",
+    "Elektronische Kuppelanzeige (falls vorhanden) zeigt \"gekuppelt\""]},
+  { titel: "5. Abziehprobe", anh: true, punkte: [
+    "Feststellbremse des Anhängers fest, mit Zugfahrzeug vorsichtig anfahren: Anhänger bleibt angekuppelt"]},
+  { titel: "5. Leitungsverbindungen", anh: true, punkte: [
+    "Druckluft Vorrat (rot) und Bremse (gelb) korrekt verbunden, Kupplungsköpfe dicht",
+    "Dichtringe der Kupplungsköpfe intakt, keine Luftverluste hörbar",
+    "Elektrik: 2 x 7-polig (24N/24S) bzw. 15-polig angeschlossen",
+    "ABS/EBS-Stecker (ISO 7638) angeschlossen",
+    "Leitungen nicht verdreht, nicht gespannt, schleifen nicht am Boden, ausreichend Spiel für Kurvenfahrt",
+    "Leitungen in Halterungen eingehängt (Wendelleitungen)",
+    "Ggf. Hydraulik-Leitungen (Kipper) verbunden und dicht"]},
+  { titel: "6. Anhänger / Auflieger allgemein", anh: true, punkte: [
+    "Stützbeine bzw. Stützrad vollständig hochgekurbelt, Kurbel gesichert",
+    "Rangierventil (schwarz) in Stellung \"Fahrt\"",
+    "Feststellbremse des Anhängers gelöst (rotes Ventil eingedrückt) – erst unmittelbar vor Abfahrt",
+    "Unterlegkeile entfernt und in der Halterung verstaut",
+    "Kennzeichen vorhanden, sauber, beleuchtet; Wiederholungskennzeichen bei Deichselanhängern",
+    "Geschwindigkeitsschild \"80\" (bzw. \"100\") und ggf. Warntafeln angebracht",
+    "Rückwärtige Warnmarkierung (Konturmarkierung) vollständig, sauber",
+    "Keine Flüssigkeitsverluste, keine Beschädigungen am Rahmen"]},
+  { titel: "6. Beleuchtung Anhänger", anh: true, punkte: [
+    "Schluss-, Brems-, Blink- und Nebelschlussleuchten",
+    "Rückfahrscheinwerfer",
+    "Umriss-, Begrenzungs- und seitliche Markierungsleuchten",
+    "Kennzeichenbeleuchtung",
+    "Rückstrahler (dreieckig hinten, seitlich gelb) vollständig"]},
+  { titel: "6. Reifen, Räder, Achsen Anhänger", anh: true, punkte: [
+    "Profiltiefe mind. 1,6 mm, keine Schäden, Reifendruck korrekt",
+    "Reifen nicht überaltert (DOT-Nummer, Risse an der Flanke)",
+    "Radmuttern fest und vollzählig",
+    "Liftachse funktioniert, abgesenkt bei Beladung",
+    "Lenkachse (falls vorhanden) entriegelt bzw. für Rückwärtsfahrt gesperrt",
+    "Luftfederung gleichmäßig, Fahrniveau eingestellt (Taste \"Fahrniveau\")",
+    "Ersatzrad sicher befestigt"]},
+  { titel: "6. Aufbau Anhänger", anh: true, punkte: [
+    "Plane ohne Risse, Spanngurte bzw. Planenseile gespannt, Zollseil eingefädelt (falls nötig)",
+    "Rungen und Einstecklatten vollständig und eingesetzt",
+    "Dachlatten / Spriegel eingesetzt",
+    "Bordwände geschlossen, Verschlüsse eingerastet und gesichert",
+    "Hecktüren geschlossen und verriegelt, Feststeller eingehakt",
+    "Ladebordwand hochgeklappt, verriegelt, Kontrollleuchte aus",
+    "Plombe / Zollverschluss angebracht und Nummer notiert (falls gefordert)",
+    "Kühlaggregat läuft, Solltemperatur eingestellt, Dieseltank des Aggregats gefüllt (Kühlfahrzeuge)",
+    "Staukasten und Palettenkasten verschlossen",
+    "Seitlicher und hinterer Unterfahrschutz vorhanden und fest"]},
+  { titel: "7. Gewichte und Maße", punkte: [
+    "Zulässiges Gesamtgewicht Zugfahrzeug, Anhänger und Zug nicht überschritten (Zug in der Regel max. 40 t, im Kombinierten Verkehr 44 t)",
+    "Achslasten eingehalten (Antriebsachse max. 11,5 t), Achslastanzeige prüfen",
+    "Mindestlast auf der Lenkachse eingehalten (Lenkfähigkeit)",
+    "Gesamthöhe max. 4 m, Breite max. 2,55 m (Kühlaufbau 2,60 m)",
+    "Gesamtlänge eingehalten: Gliederzug 18,75 m, Sattelzug 16,50 m",
+    "Überstand nach hinten max. 1,5 m (bis 100 km 3 m), ab 1 m Kenntlichmachung"]},
+  { titel: "7. Lastverteilung", punkte: [
+    "Schwerpunkt möglichst tief und mittig, Lastverteilungsplan beachtet",
+    "Schwere Güter unten, leichte oben",
+    "Ladung formschlüssig: Lücken zur Stirnwand und zwischen Ladegütern geschlossen oder gesperrt"]},
+  { titel: "7. Sicherungsmittel", punkte: [
+    "Ausreichende Anzahl Zurrgurte nach Berechnung (VDI 2700 / DIN EN 12195)",
+    "Zurrgurte mit lesbarem Etikett, ohne Schnitte, Knoten oder Verformung der Ratschen",
+    "Kantenschutz an scharfen Kanten",
+    "Antirutschmatten unter der Ladung",
+    "Sperrbalken, Klemmbretter, Netze, Ketten wie nötig eingesetzt",
+    "Gurte nachgespannt, keine losen Enden flattern"]},
+  { titel: "7. Besondere Ladung", punkte: [
+    "Lose Ladung (Schüttgut) abgedeckt",
+    "Plane und Ladungsraum frei von Schnee, Eis und Wasseransammlungen",
+    "Gefahrgut: orange Warntafeln angebracht bzw. abgedeckt, Großzettel, Zusammenladeverbote beachtet",
+    "Lebensmittel / Pharma: Temperatur und Hygienevorgaben eingehalten, Temperaturschreiber läuft",
+    "Ladung nach den ersten Kilometern bzw. nach starker Bremsung erneut kontrollieren"]},
+  { titel: "8. Funktionsprüfung und Bremsprobe", hinweis: "Motor starten, Vorratsdruck vollständig aufbauen lassen.", punkte: [
+    "Alle Warn- und Kontrollleuchten geprüft (keine roten Meldungen)",
+    "Feststellbremse gelöst, Betriebsbremse getreten: Druck fällt nur kurz, kein dauerhafter Abfall",
+    A("Anhänger-Prüfstellung der Feststellbremse (falls vorhanden): Zug bleibt allein mit Anhängerbremsung stehen"),
+    "Langsam angefahren und Betriebsbremse kräftig betätigt: Zug bremst gerade, ohne Ziehen",
+    "Retarder / Motorbremse kurz getestet",
+    "Lenkung in Bewegung geprüft: kein Schlagen, kein Ziehen",
+    "Keine ungewohnten Geräusche, Vibrationen oder Gerüche",
+    "Nach den ersten Kilometern ABS/EBS-Leuchten erneut kontrollieren",
+    "Bei neu montierten Rädern: Radmuttern nach ca. 50–100 km nachziehen lassen"]},
+  { titel: "9. Winter", saison: "winter", punkte: [
+    "Dach und Plane von Schnee und Eis befreit (Eisplatten sind ein Unfallrisiko)",
+    "Alle Scheiben, Spiegel, Leuchten und Kennzeichen eisfrei",
+    "Winterdiesel getankt, Tank mindestens halb voll",
+    "Druckluftanlage entwässert, Lufttrockner funktioniert (kein Wasser in den Behältern)",
+    "Schneeketten und Streumittel an Bord"]},
+  { titel: "9. Sommer", saison: "sommer", punkte: [
+    "Klimaanlage funktioniert, ausreichend Trinkwasser dabei",
+    "Reifendruck nach längerer Standzeit in der Sonne kontrolliert"]}
 ];
+const CHECK_PKW = [
+  { titel: "1. Fahrer", punkte: [
+    "Fahrtüchtig: ausgeruht, kein Alkohol, keine einschränkenden Medikamente",
+    "Brille / Kontaktlinsen dabei, falls vorgeschrieben",
+    "Geeignetes Schuhwerk (keine Flip-Flops, keine hohen Absätze)"]},
+  { titel: "1. Dokumente", punkte: [
+    "Führerschein",
+    "Zulassungsbescheinigung Teil I (Fahrzeugschein)",
+    "Personalausweis",
+    "HU-Plakette gültig",
+    "Grüne Karte / Versicherungsnachweis für Auslandsfahrten",
+    "Vignette bzw. Mautbox für Auslandsfahrten",
+    "Umweltplakette (für Umweltzonen)",
+    "Europäischer Unfallbericht, Pannenhilfe-Nummer"]},
+  { titel: "1. Pflicht- und empfohlene Ausrüstung", punkte: [
+    "Warndreieck",
+    "Verbandkasten nach DIN 13164, Verfallsdatum prüfen",
+    "Warnweste (Pflicht: mindestens eine; empfohlen: eine pro Insasse, griffbereit)",
+    "Reserverad, Notrad oder Reifenreparaturset; Wagenheber und Radschlüssel",
+    "Starthilfekabel, Taschenlampe, Eiskratzer",
+    "Ggf. Schneeketten, Feuerlöscher, Abschleppseil",
+    "Kindersitze passend zu Größe/Gewicht und korrekt montiert (Isofix eingerastet)"]},
+  { titel: "2. Allgemein", punkte: [
+    "Keine Flüssigkeitsflecken unter dem Fahrzeug",
+    "Fahrzeug steht gerade (kein platter Reifen, keine gebrochene Feder)",
+    "Keine neuen Schäden an Karosserie, Stoßfängern, Unterboden",
+    "Kennzeichen vorn und hinten sauber, lesbar, fest",
+    "Türen, Motorhaube, Heckklappe und Tankdeckel schließen richtig"]},
+  { titel: "2. Scheiben, Spiegel, Sensoren", punkte: [
+    "Frontscheibe ohne Risse oder Steinschläge im Sichtfeld",
+    "Alle Scheiben sauber und frei",
+    "Außenspiegel vorhanden, unbeschädigt, sauber",
+    "Wischerblätter ohne Risse, wischen schlierenfrei",
+    "Kamera, Radar- und Parksensoren sauber"]},
+  { titel: "2. Beleuchtung", punkte: [
+    "Abblend-, Fern-, Stand- und Tagfahrlicht",
+    "Blinker vorn, seitlich, hinten; Warnblinkanlage",
+    "Bremsleuchten inkl. dritte Bremsleuchte",
+    "Rück-, Nebelschluss- und Rückfahrleuchten",
+    "Kennzeichenbeleuchtung",
+    "Scheinwerfer sauber, Streuscheiben unbeschädigt, nicht blendend eingestellt"]},
+  { titel: "2. Reifen und Räder", punkte: [
+    "Profiltiefe: gesetzlich mind. 1,6 mm, empfohlen Sommer 3 mm, Winter 4 mm",
+    "Reifendruck nach Tabelle (Tankdeckel / B-Säule), bei Beladung erhöht",
+    "Keine Beulen, Schnitte, Risse oder Fremdkörper",
+    "Reifenalter beachten (DOT-Nummer, älter als ca. 8 Jahre kritisch)",
+    "Winterreifen mit Alpine-Symbol bei winterlichen Verhältnissen",
+    "Radschrauben fest, Felgen ohne Schäden, Ventilkappen vorhanden"]},
+  { titel: "3. Motorraum und Flüssigkeiten", hinweis: "Bei kaltem Motor und ebenem Stand prüfen (bei E-Autos entfallen Öl und Keilriemen).", punkte: [
+    "Motoröl zwischen Min. und Max.",
+    "Kühlmittel im Ausgleichsbehälter auf Sollstand",
+    "Bremsflüssigkeit zwischen Min. und Max. (Wechselintervall laut Serviceheft)",
+    "Scheibenwaschwasser gefüllt, im Winter mit Frostschutz",
+    "AdBlue gefüllt (Diesel mit SCR)",
+    "Batterie fest, Pole sauber; bei E-Auto Ladestand für die Strecke ausreichend",
+    "Keine Lecks, keine Marderbisse an Schläuchen und Kabeln",
+    "Motorhaube richtig eingerastet"]},
+  { titel: "4. Vor dem Start", punkte: [
+    "Sitz, Lenkrad, Kopfstützen und Spiegel eingestellt",
+    "Gurte für alle Insassen funktionieren und sind angelegt",
+    "Keine losen Gegenstände im Fußraum (Pedale frei) oder auf der Hutablage",
+    "Handy im Halter, Navi außerhalb des Sicht- und Airbagbereichs eingestellt"]},
+  { titel: "4. Nach dem Start", punkte: [
+    "Kontrollleuchten erlöschen; keine roten oder gelben Warnmeldungen (Motor, Öl, Bremse, Airbag, ABS/ESP, Reifendruck)",
+    "Tank- bzw. Akkuanzeige ausreichend für die Strecke",
+    "Hupe funktioniert",
+    "Scheibenwischer und Waschanlage",
+    "Heizung, Gebläse, Defroster, Klimaanlage; Scheiben beschlagfrei",
+    "Assistenzsysteme aktiv (Notbremsassistent, Spurhalteassistent)",
+    "Lenkung leichtgängig, kein Spiel",
+    "Feststellbremse löst vollständig"]},
+  { titel: "4. Bremsprobe", punkte: [
+    "Bremspedal getreten: fester Druckpunkt, sackt nicht durch",
+    "Langsam angefahren und kräftig gebremst: Auto bremst gerade, ohne Ziehen oder Geräusche",
+    "Keine ungewohnten Geräusche, Vibrationen oder Gerüche"]},
+  { titel: "5. Beladung", punkte: [
+    "Zulässiges Gesamtgewicht und zulässige Personenzahl nicht überschritten (Fahrzeugschein)",
+    "Schwere Gegenstände unten und direkt an der Rückbanklehne",
+    "Ladung gesichert (Zurrösen, Gepäcknetz, Trenngitter), Rücksitzlehnen eingerastet",
+    "Scheinwerfer-Leuchtweite an Beladung angepasst",
+    "Dachbox / Dachträger fest, zulässige Dachlast eingehalten",
+    "Fahrradträger: Fahrräder gesichert, Kennzeichen und Leuchten sichtbar"]},
+  { titel: "5. Bei Anhängerbetrieb", anh: true, punkte: [
+    "Führerscheinklasse passt (B, B96 oder BE)",
+    "Anhängelast und Stützlast eingehalten",
+    "Kugelkopfkupplung eingerastet (Anzeige grün), Abreißseil eingehängt",
+    "Stecker eingesteckt, Beleuchtung des Anhängers geprüft",
+    "Stützrad hochgekurbelt und gesichert, Handbremse am Anhänger gelöst",
+    "Reifen, Kennzeichen und HU des Anhängers in Ordnung"]},
+  { titel: "5. Winter", saison: "winter", punkte: [
+    "Alle Scheiben, Spiegel, Leuchten und Kennzeichen eis- und schneefrei",
+    "Dach, Motorhaube und Kofferraumdeckel von Schnee befreit",
+    "Winterreifen montiert, Frostschutz im Wischwasser"]}
+];
+// Checkliste passend zu Fahrzeugart, Anhänger und Jahreszeit zusammenstellen
+function abfahrtCheckliste(typ, mitAnhaenger){
+  const m = new Date().getMonth() + 1, saison = (m >= 10 || m <= 4) ? "winter" : "sommer";
+  return (typ === "LKW" ? CHECK_LKW : CHECK_PKW)
+    .filter(g => (!g.anh || mitAnhaenger) && (!g.saison || g.saison === saison))
+    .map(g => ({ titel: g.titel, hinweis: g.hinweis,
+      punkte: g.punkte.filter(p => typeof p === "string" || mitAnhaenger).map(p => typeof p === "string" ? p : p.t) }));
+}
+
+// Zusätzlicher Abschnitt bei Übergabe / Übernahme
 const HANDOVER = { titel: "Übergabezustand", punkte: [
   "Innenraum sauber",
   "Fahrzeug außen sauber",
@@ -739,11 +1105,12 @@ document.querySelectorAll("[data-vs]").forEach(b => b.onclick = () => {
 let cur = "s-start", fwSession = false, zeTimer = null;
 const TITLES = { "s-fzg": "Fahrzeugkontrolle", "s-fs": "Führerscheinkontrolle", "s-nd": "🚨 Notdienst", "s-settings": "Einstellungen",
   "s-done": "Startklar", "s-fw-login": "🔒 Fristenwächter", "s-fw": "Fristenwächter",
-  "s-ze": "⏱ Zeiterfassung", "s-ze-entry": "Arbeitszeit", "s-ze-abs": "Urlaub / Krank", "s-todo": "✅ ToDo", "s-todo-edit": "ToDo" };
+  "s-ze": "⏱ Zeiterfassung", "s-ze-entry": "Arbeitszeit", "s-ze-abs": "Urlaub / Krank", "s-todo": "✅ ToDo", "s-todo-edit": "ToDo",
+  "s-fw-import": "Aus Führerscheinkontrolle übernehmen" };
 const EINGABE = ["s-form", "s-fs", "s-nd", "s-fw-edit", "s-ze-entry", "s-ze-abs", "s-todo-edit"];   // Seiten mit Eingaben, die verloren gehen können
 function show(id){
   cur = id;
-  ["s-start","s-fzg","s-form","s-fs","s-nd","s-done","s-settings","s-fw-login","s-fw","s-fw-edit","s-ze","s-ze-entry","s-ze-abs","s-todo","s-todo-edit"]
+  ["s-start","s-fzg","s-form","s-fs","s-nd","s-done","s-settings","s-fw-login","s-fw","s-fw-edit","s-fw-import","s-ze","s-ze-entry","s-ze-abs","s-todo","s-todo-edit"]
     .forEach(s => $("#"+s).classList.toggle("hidden", s !== id));
   if(id !== "s-ze") clearInterval(zeTimer);
   $("#formBar").classList.toggle("hidden", !EINGABE.includes(id));
@@ -760,12 +1127,13 @@ function show(id){
   $("#title").classList.toggle("hidden", id === "s-start");
   window.scrollTo(0,0);
   if(id === "s-start"){ renderHistory(); renderFsStatus(); renderFwStatus(); renderZeStatus(); renderTodoStatus(); }
-  if(id === "s-form") sizeSig();
+  if(id === "s-form"){ sizeSig(); kopfHoehe(); }
 }
 $("#backBtn").onclick = () => {
   if(EINGABE.includes(cur) && !confirm("Eingaben verwerfen?")) return;
   if(cur === "s-ze-entry" || cur === "s-ze-abs") return zeZeigen();
   if(cur === "s-todo-edit") return todoZeigen();
+  if(cur === "s-fw-import") return fwZeigen("fahrer");
   show(cur === "s-form" || cur === "s-nd" ? "s-fzg" : cur === "s-fw-edit" ? "s-fw" : "s-start");
 };
 $("#goNd").onclick = () => startNd();
@@ -779,14 +1147,20 @@ document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => startFor
 function nowLocal(){ const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
 
 function startForm(m){
-  mode = m; answers = {}; photos = [];
+  mode = m; answers = {}; photos = []; antwortSpeicher = {};
+  $("#ck-suche").value = ""; $("#ck-offen").checked = false;
+  $("#checkSuche").classList.add("hidden");   // Mängelmelder hat keine Checkliste
   const isHand = m === "uebergabe" || m === "uebernahme";
   const last = store.get("lastDriver", {});
   $("#f-fahrer").value = last.fahrer || "";
   $("#f-kennz").value = (last.kennz || "").replace(/[^A-Z0-9]/g, "");
   $("#f-anh").value = (last.anh || "").replace(/[^A-Z0-9]/g, "");
-  ["f-km","f-von","f-bis","f-vertr","f-tank","f-adblue","f-schl","f-bem","f-ort"].forEach(id => $("#"+id).value = "");
+  ["f-km","f-von","f-bis","f-vertr","f-tank","f-adblue","f-schl","f-bem","f-ort","f-ziel","f-ladung"].forEach(id => $("#"+id).value = "");
   $("#mangelFields").classList.toggle("hidden", m !== "mangel");
+  // Abfahrtskontrolle, Übergabe, Übernahme: Fahrzeugart wählen (wird pro Gerät gemerkt)
+  fzTyp = mitFzTyp(m) ? (last.fzTyp || null) : null;
+  $("#fzTypCard").classList.toggle("hidden", !mitFzTyp(m));
+  $("#fzTypCard").classList.remove("missing");
   $("#btnSubmit").textContent = m === "mangel" ? "Mangel melden" : "Kontrolle abschließen";
   $("#f-zeit").value = nowLocal();
   $("#f-bestaet").checked = false;
@@ -799,12 +1173,40 @@ function startForm(m){
   $("#l-bestaet").textContent = MODES[m].bestaet;
   $("#photoHint").textContent = MODES[m].fotoHint;
   if(m === "mangel") renderDefectList();
-  else renderChecklist(isHand ? [...BASE, HANDOVER] : BASE);
+  else abfahrtListe();
   renderPhotos();
   show("s-form");
   clearSig();
   updatePrevInfo();
 }
+
+/* Abfahrtskontrolle, Übergabe, Übernahme: Checkliste je nach PKW/LKW und Anhänger */
+let fzTyp = null, mitAnh = false;
+const mitFzTyp = m => m === "abfahrt" || m === "uebergabe" || m === "uebernahme";
+function abfahrtListe(){
+  document.querySelectorAll("[data-fztyp]").forEach(b => b.className = b.dataset.fztyp === fzTyp ? "on ok" : "");
+  $("#lkwFields").classList.toggle("hidden", !(mode === "abfahrt" && fzTyp === "LKW"));
+  mitAnh = !!$("#f-anh").value.trim();
+  $("#checkSuche").classList.toggle("hidden", !fzTyp);
+  if(!fzTyp){
+    answers = {};
+    $("#checklist").innerHTML = '<div class="card"><p class="hint" style="margin:0">Bitte oben zuerst die Fahrzeugart (PKW oder LKW) wählen – dann erscheint die passende Checkliste.</p></div>';
+    return;
+  }
+  const liste = abfahrtCheckliste(fzTyp, mitAnh);
+  // Übergabe / Übernahme: zusätzlich der Übergabezustand
+  renderChecklist(mode === "uebergabe" || mode === "uebernahme" ? [...liste, HANDOVER] : liste);
+  renderPhotos();
+}
+document.querySelectorAll("[data-fztyp]").forEach(b => b.onclick = () => {
+  fzTyp = b.dataset.fztyp;
+  $("#fzTypCard").classList.remove("missing");
+  abfahrtListe();
+});
+// Anhänger-Punkte ein-/ausblenden, sobald das Anhänger-Kennzeichen gefüllt bzw. geleert wird
+$("#f-anh").addEventListener("input", () => {
+  if(mitFzTyp(mode) && fzTyp && !!$("#f-anh").value.trim() !== mitAnh) abfahrtListe();
+});
 
 function updatePrevInfo(){
   const box = $("#prevInfo");
@@ -819,14 +1221,87 @@ function updatePrevInfo(){
 }
 $("#f-kennz").addEventListener("change", updatePrevInfo);
 
+/* Suche in der Checkliste */
+// gleich lange Normalisierung (ä→a, ß→s), damit Treffer im Originaltext markiert werden können
+const suchNorm = s => s.toLowerCase().replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u").replace(/ß/g, "s");
+function markieren(text, woerter){
+  if(!woerter.length) return esc(text);
+  const n = suchNorm(text), an = new Array(text.length).fill(false);
+  woerter.forEach(w => { let i = n.indexOf(w); while(i >= 0){ for(let k = i; k < i + w.length; k++) an[k] = true; i = n.indexOf(w, i + 1); } });
+  let out = "", offen = false;
+  for(let i = 0; i < text.length; i++){
+    if(an[i] && !offen){ out += "<mark>"; offen = true; }
+    if(!an[i] && offen){ out += "</mark>"; offen = false; }
+    out += esc(text[i]);
+  }
+  return out + (offen ? "</mark>" : "");
+}
+function checkFiltern(){
+  const woerter = suchNorm($("#ck-suche").value).split(/\s+/).filter(Boolean), nurOffen = $("#ck-offen").checked;
+  $("#ck-leeren").classList.toggle("hidden", !$("#ck-suche").value);
+  let sichtbar = 0;
+  document.querySelectorAll("#checklist > .card").forEach(card => {
+    const h2 = card.querySelector("h2"); if(!h2) return;
+    const titel = h2.dataset.text || (h2.dataset.text = h2.textContent);
+    let n = 0;
+    card.querySelectorAll(".item").forEach(it => {
+      const a = answers[it.dataset.key], q = it.querySelector(".q");
+      const ok = woerter.every(w => suchNorm(titel + " " + a.punkt).includes(w)) && (!nurOffen || !a.status);
+      it.classList.toggle("hidden", !ok);
+      q.innerHTML = markieren(a.punkt, woerter);
+      if(ok) n++;
+    });
+    h2.innerHTML = markieren(titel, woerter);
+    card.classList.toggle("hidden", !n);
+    sichtbar += n;
+  });
+  const leer = $("#ck-leer");
+  if(!sichtbar && (woerter.length || nurOffen)){
+    if(!leer) $("#checklist").insertAdjacentHTML("afterbegin", `<div class="card" id="ck-leer"><p class="hint" style="margin:0">Kein passender Prüfpunkt gefunden.</p></div>`);
+  } else if(leer) leer.remove();
+  checkInfo(woerter.length || nurOffen ? sichtbar : null);
+}
+function checkInfo(sichtbar){
+  const alle = Object.values(answers), offen = alle.filter(a => !a.status).length;
+  if(sichtbar === undefined) sichtbar = ($("#ck-suche").value.trim() || $("#ck-offen").checked) ? document.querySelectorAll("#checklist .item:not(.hidden)").length : null;
+  $("#ck-info").textContent = (sichtbar !== null ? `${sichtbar} von ${alle.length} angezeigt · ` : `${alle.length} Punkte · `) + `${offen} offen`;
+}
+// Alle offenen (bei aktiver Suche: alle angezeigten offenen) Punkte auf OK – mit Rückfrage
+$("#ck-alleok").onclick = () => {
+  const gefiltert = !!($("#ck-suche").value.trim() || $("#ck-offen").checked);
+  const offen = [...document.querySelectorAll("#checklist .item" + (gefiltert ? ":not(.hidden)" : ""))].filter(it => !answers[it.dataset.key].status);
+  if(!offen.length) return toast("Keine offenen Punkte" + (gefiltert ? " in der Anzeige" : ""));
+  if(!confirm(`${offen.length} offene${gefiltert ? " angezeigte" : ""} Punkt(e) auf OK setzen?\n\nBitte nur bestätigen, wenn diese Punkte wirklich geprüft wurden.`)) return;
+  offen.forEach(it => it.querySelector('[data-s="ok"]').click());
+  toast(`${offen.length} Punkt(e) auf OK gesetzt`);
+  if($("#ck-offen").checked) checkFiltern();
+};
+function sucheZuruecksetzen(){ $("#ck-suche").value = ""; $("#ck-offen").checked = false; checkFiltern(); }
+$("#ck-suche").addEventListener("input", checkFiltern);
+$("#ck-suche").addEventListener("keydown", e => { if(e.key === "Enter") e.target.blur(); });   // Tastatur schließen
+$("#ck-offen").onchange = checkFiltern;
+$("#ck-leeren").onclick = () => { $("#ck-suche").value = ""; checkFiltern(); $("#ck-suche").focus(); };
+// Suchleiste bleibt direkt unter der Kopfleiste stehen
+const kopfHoehe = () => document.documentElement.style.setProperty("--kopf", document.querySelector("header").offsetHeight + "px");
+window.addEventListener("resize", kopfHoehe);
+
+// Fester Schlüssel je Prüfpunkt (aus Abschnitt + Text), damit Antworten beim Neuaufbau der Liste erhalten bleiben
+function punktKey(gruppe, punkt){
+  let h = 0;
+  for(const c of gruppe + "|" + punkt) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return "k" + (h >>> 0).toString(36);
+}
+let antwortSpeicher = {};   // alle Antworten der laufenden Kontrolle, auch von gerade ausgeblendeten Punkten
 function renderChecklist(groups){
   const wrap = $("#checklist"); wrap.innerHTML = "";
-  groups.forEach((g, gi) => {
+  Object.assign(antwortSpeicher, answers);
+  const vorher = antwortSpeicher; answers = {};
+  groups.forEach(g => {
     const card = document.createElement("div"); card.className = "card";
-    card.innerHTML = `<h2>${esc(g.titel)}</h2>`;
-    g.punkte.forEach((p, pi) => {
-      const key = gi + "-" + pi;
-      answers[key] = { gruppe: g.titel, punkt: p, status: null, note: "" };
+    card.innerHTML = `<h2>${esc(g.titel)}</h2>` + (g.hinweis ? `<p class="hint" style="margin-top:-6px">${esc(g.hinweis)}</p>` : "");
+    g.punkte.forEach(p => {
+      const key = punktKey(g.titel, p);
+      answers[key] = vorher[key] || { gruppe: g.titel, punkt: p, status: null, note: "" };
       const it = document.createElement("div"); it.className = "item"; it.dataset.key = key;
       it.innerHTML = `<div class="q">${esc(p)}</div>
         <div class="seg">
@@ -851,17 +1326,27 @@ function renderChecklist(groups){
         it.classList.toggle("isbad", b.dataset.s === "bad");
         it.classList.remove("missing");
         if(b.dataset.s === "bad") it.querySelector(".note").focus();
+        checkInfo();
       });
       it.querySelector(".note").oninput = e => answers[key].note = e.target.value;
+      // bereits gegebene Antwort wiederherstellen
+      const a = answers[key];
+      if(a.status){
+        it.querySelector(`[data-s="${a.status}"]`).className = "on " + a.status;
+        it.classList.toggle("isbad", a.status === "bad");
+      }
+      it.querySelector(".note").value = a.note || "";
       card.appendChild(it);
     });
     const all = document.createElement("button");
     all.type = "button"; all.className = "btn sec small"; all.style.marginTop = "8px";
     all.textContent = "Alle offenen auf OK";
-    all.onclick = () => card.querySelectorAll(".item").forEach(it => { if(!answers[it.dataset.key].status) it.querySelector('[data-s="ok"]').click(); });
+    // bei aktiver Suche nur die sichtbaren Punkte
+    all.onclick = () => card.querySelectorAll(".item:not(.hidden)").forEach(it => { if(!answers[it.dataset.key].status) it.querySelector('[data-s="ok"]').click(); });
     card.appendChild(all);
     wrap.appendChild(card);
   });
+  if(!$("#checkSuche").classList.contains("hidden")) checkFiltern();
 }
 
 /* ---------- Mängelmelder: frei erfasste Mängel ---------- */
@@ -981,6 +1466,7 @@ $("#btnSubmit").onclick = () => cur === "s-fs" ? submitFs() : cur === "s-nd" ? s
 function submitCheck(){
   const err = [];
   const v = id => $("#"+id).value.trim();
+  if(mitFzTyp(mode) && !fzTyp){ err.push("Fahrzeugart (PKW/LKW)"); $("#fzTypCard").classList.add("missing"); }
   if(!v("f-fahrer")) err.push("Fahrer");
   if(!v("f-kennz")) err.push("Kennzeichen");
   if(!v("f-km")) err.push("Kilometerstand");
@@ -1012,11 +1498,13 @@ function submitCheck(){
   if(!$("#f-bestaet").checked) err.push("Bestätigung");
   if(err.length){
     toast("Bitte ergänzen: " + err.join(", "));
+    // durch die Suche ausgeblendete Punkte wieder anzeigen, damit der fehlende Punkt sichtbar ist
+    if(firstMissing && firstMissing.closest(".hidden")) sucheZuruecksetzen();
     (firstMissing || $("#f-fahrer")).scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
   store.set("lastDriver", Object.assign(store.get("lastDriver", {}),
-    { fahrer: v("f-fahrer"), kennz: v("f-kennz").toUpperCase(), anh: v("f-anh").toUpperCase() }));
+    { fahrer: v("f-fahrer"), kennz: v("f-kennz").toUpperCase(), anh: v("f-anh").toUpperCase() }, mitFzTyp(mode) ? { fzTyp } : {}));
   lastReport = buildReport();
   saveHistory(lastReport);
   showDone(lastReport);
@@ -1841,6 +2329,13 @@ const FW_FAHRZEUG = ["HU / TÜV / Contrôle technique", "SP Sicherheitsprüfung 
 const FW_FAHRER = ["Führerschein (Dokument)", "Führerschein Klasse C/CE", "Personalausweis", "Fahrerqualifizierung (Code 95)",
   "Gefahrgutschein (ADR)", "Fahrerkarte (Tacho)", "Führerscheinkontrolle", "Aufenthaltstitel", "Reisepass"];
 const FW_TYPEN = ["PKW", "Sprinter/Transporter", "LKW", "Anhänger", "Sonstiges"];
+// Diese Fristen stehen auf Prüfplaketten nur mit Monat/Jahr: Eingabe und Anzeige als MM/JJJJ,
+// gespeichert wird der letzte Tag des Monats (gültig bis Monatsende)
+const FW_NUR_MONAT = ["HU / TÜV / Contrôle technique", "SP Sicherheitsprüfung (LKW/Anh.)", "UVV-Prüfung", "Feuerlöscher-Prüfung",
+  "ADR: Augenspülflasche", "ADR: Maske", "ADR: Filter"];
+const fwNurMonat = art => FW_NUR_MONAT.includes(art);
+const fwDatum = (art, iso) => fwNurMonat(art) ? iso.slice(5, 7) + "/" + iso.slice(0, 4) : fmtIso(iso);
+const monatsEnde = ym => { const [y, m] = ym.split("-").map(Number); return ym + "-" + String(new Date(y, m, 0).getDate()).padStart(2, "0"); };
 const WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 let fwTab = "uebersicht", fwEdit = null;
 
@@ -1933,7 +2428,7 @@ function fwRender(){
     $("#fwListe").innerHTML = !l.length ? '<p class="hint">Keine Einträge.</p>' : l.map(f => `<div class="fw-row">
       <span class="dot st${f.st}"></span>
       <div class="grow"><b>${esc(f.obj)}</b><br><span class="hint">${esc(f.kat)} · ${esc(f.art)}</span></div>
-      <div class="dat">${fmtIso(f.iso)}<br><span class="hint">${f.tage < 0 ? "seit " + (-f.tage) + " Tagen abgelaufen" : "noch " + f.tage + " Tage"}</span></div></div>`).join("");
+      <div class="dat">${fwDatum(f.art, f.iso)}<br><span class="hint">${f.tage < 0 ? "seit " + (-f.tage) + " Tagen abgelaufen" : "noch " + f.tage + " Tage"}</span></div></div>`).join("");
   }
   if(fwTab === "fahrzeuge" || fwTab === "fahrer"){
     const fz = fwTab === "fahrzeuge", typ = fz ? "fz" : "fa";
@@ -1989,9 +2484,9 @@ function fwBearbeiten(typ, o){
   if(kz) kz.addEventListener("input", () => { const p = kz.selectionStart, v = kz.value.toUpperCase(); if(v !== kz.value){ kz.value = v; kz.setSelectionRange(p, p); } });
   const vorlauf = fwDaten().vorlauf;
   $("#fwEditFristen").innerHTML = (typ === "fz" ? FW_FAHRZEUG : FW_FAHRER).map((art, i) => {
-    const iso = o.fristen[art] || "";
-    return `<div class="fw-frist${iso ? " st" + fwStatus(iso, vorlauf) : ""}"><label for="fwf-${i}">${esc(art)}</label>
-      <input type="date" id="fwf-${i}" data-art="${esc(art)}" value="${iso}"></div>`;
+    const iso = o.fristen[art] || "", monat = fwNurMonat(art);
+    return `<div class="fw-frist${iso ? " st" + fwStatus(iso, vorlauf) : ""}"><label for="fwf-${i}">${esc(art)}${monat ? ' <span class="hint">(MM/JJJJ)</span>' : ""}</label>
+      <input type="${monat ? "month" : "date"}" id="fwf-${i}" data-art="${esc(art)}" value="${monat ? iso.slice(0, 7) : iso}"${monat ? ' placeholder="JJJJ-MM"' : ""}></div>`;
   }).join("");
   $("#fwLoeschen").classList.toggle("hidden", neu);
   show("s-fw-edit");
@@ -2007,7 +2502,13 @@ function fwSpeichern(){
     Object.assign(o, { nachname: v("fwe-nach"), vorname: v("fwe-vor"), pnr: v("fwe-pnr"), notiz: v("fwe-notiz") });
   }
   o.fristen = {};
-  document.querySelectorAll("#fwEditFristen input[type=date]").forEach(i => { if(i.value) o.fristen[i.dataset.art] = i.value; });
+  document.querySelectorAll("#fwEditFristen input[data-art]").forEach(i => {
+    if(!i.value) return;
+    if(fwNurMonat(i.dataset.art)){
+      if(!/^\d{4}-\d{2}$/.test(i.value)) return;   // Monatsfeld: gültig bis Monatsende
+      o.fristen[i.dataset.art] = monatsEnde(i.value);
+    } else o.fristen[i.dataset.art] = i.value;
+  });
   const d = fwDaten(), liste = typ === "fz" ? d.fahrzeuge : d.fahrer;
   const idx = liste.findIndex(x => x.id === o.id);
   if(idx >= 0) liste[idx] = o; else liste.push(o);
@@ -2031,7 +2532,7 @@ $("#fwBericht").onclick = () => {
   const abg = l.filter(f => f.st === 2).length;
   const text = [`Fristenwächter Fuhrpark – Stand ${fmtIso(isoHeute())}`, "",
     `${l.length} Frist(en) sind abgelaufen oder laufen innerhalb von ${d.vorlauf} Monaten ab:`, "",
-    ...l.map(f => `[${fwStatusText(f.st)}] ${f.kat}: ${f.obj} – ${f.art} – ${fmtIso(f.iso)} (${f.tage < 0 ? "seit " + (-f.tage) + " Tagen abgelaufen" : "noch " + f.tage + " Tage"})`)
+    ...l.map(f => `[${fwStatusText(f.st)}] ${f.kat}: ${f.obj} – ${f.art} – ${fwDatum(f.art, f.iso)} (${f.tage < 0 ? "seit " + (-f.tage) + " Tagen abgelaufen" : "noch " + f.tage + " Tage"})`)
   ].join("\n");
   location.href = mailtoUrl({ subject: `Fristenwächter: ${l.length} Frist(en) fällig` + (abg ? `, ${abg} abgelaufen` : "") }, text);
 };
@@ -2045,7 +2546,7 @@ function dateiSpeichern(inhalt, name, mime){
 $("#fwCsv").onclick = () => {
   const csv = s => '"' + String(s).replace(/"/g, '""') + '"';
   const zeilen = ["Status;Kategorie;Fahrzeug / Fahrer;Frist;Ablaufdatum;Tage verbleibend",
-    ...fwListe(fwDaten(), true).map(f => [fwStatusText(f.st), f.kat, csv(f.obj), csv(f.art), fmtIso(f.iso), f.tage].join(";"))];
+    ...fwListe(fwDaten(), true).map(f => [fwStatusText(f.st), f.kat, csv(f.obj), csv(f.art), fwDatum(f.art, f.iso), f.tage].join(";"))];
   dateiSpeichern("﻿" + zeilen.join("\r\n"), `Fristen_${isoHeute()}.csv`, "text/csv");
 };
 $("#fwExport").onclick = () => dateiSpeichern(JSON.stringify(Object.assign({ format: "fristenwaechter-app", stand: isoHeute() }, fwDaten()), null, 1),
@@ -2099,6 +2600,93 @@ $("#fwPwBtn").onclick = async () => {
   toast("✓ Passwort geändert");
 };
 
+/* Daten aus der Führerscheinkontrolle übernehmen – nur nach Bestätigung jeder einzelnen Änderung */
+let fwiBloecke = [];
+$("#fwImportBtn").onclick = () => {
+  if(!fwSession) return $("#goFw").click();
+  $("#fwi-text").value = ""; $("#fwiErgebnis").innerHTML = ""; fwiBloecke = [];
+  show("s-fw-import");
+};
+function fwiLesen(text){
+  const out = [];
+  // Mail-Programme können lange Zeilen umbrechen oder Antwort-Zeichen (">") einfügen
+  for(const m of text.matchAll(/SK1:([\s\S]*?):SK1ENDE/g)){
+    try{
+      const j = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/[\s>]/g, "")))));
+      if(j && j.v === 1 && j.fahrer && j.fristen) out.push(j);
+    }catch(e){}
+  }
+  return out;
+}
+// Fahrer per Name zuordnen (Reihenfolge Vor-/Nachname egal, Groß-/Kleinschreibung und Umlaute egal)
+const nameTeile = s => suchNorm(s).split(/[\s,]+/).filter(Boolean).sort().join(" ");
+const fwiFahrerSuchen = (d, name) => d.fahrer.find(f => nameTeile(f.vorname + " " + f.nachname) === nameTeile(name));
+$("#fwiPruefen").onclick = () => {
+  fwiBloecke = fwiLesen($("#fwi-text").value);
+  const w = $("#fwiErgebnis");
+  if(!fwiBloecke.length){
+    w.innerHTML = '<div class="card"><p class="hint" style="margin:0;color:var(--bad)">Kein Datenblock gefunden. Bitte den kompletten Mail-Text einfügen – der Block beginnt mit „SK1:“ und endet mit „:SK1ENDE“.</p></div>';
+    return;
+  }
+  const d = fwDaten();
+  w.innerHTML = fwiBloecke.map((b, bi) => {
+    const fa = fwiFahrerSuchen(d, b.fahrer);
+    return `<div class="card">
+      <h2>${esc(b.fahrer)} <span class="hint">· Kontrolle vom ${fmtIso(b.datum)} · Klasse ${esc(b.klasse || "?")}</span></h2>
+      <label for="fwi-fa-${bi}">Fahrer im Fristenwächter${fa ? "" : ' <span class="tag warn">nicht gefunden</span>'}</label>
+      <select id="fwi-fa-${bi}" data-b="${bi}">
+        <option value="neu">+ Neu anlegen: ${esc(b.fahrer)}</option>
+        ${d.fahrer.slice().sort((x, y) => x.nachname.localeCompare(y.nachname)).map(f =>
+          `<option value="${esc(f.id)}"${fa && fa.id === f.id ? " selected" : ""}>${esc(f.nachname)}, ${esc(f.vorname)}</option>`).join("")}
+      </select>
+      <div class="fwi-liste" id="fwi-liste-${bi}" style="margin-top:10px"></div>
+    </div>`;
+  }).join("") + `<button class="btn" type="button" id="fwiUebernehmen">Angehakte Änderungen übernehmen</button>
+    <p class="hint">Es wird nur übernommen, was du angehakt hast.</p>`;
+  // Abweichungen anzeigen; bei anderer Fahrer-Zuordnung neu berechnen
+  w.querySelectorAll("select[data-b]").forEach(s => { s.onchange = () => fwiNeuVergleichen(+s.dataset.b, s.value); fwiNeuVergleichen(+s.dataset.b, s.value); });
+  $("#fwiUebernehmen").onclick = fwiUebernehmen;
+};
+function fwiNeuVergleichen(bi, faId){
+  const d = fwDaten(), b = fwiBloecke[bi], fa = d.fahrer.find(f => f.id === faId) || null;
+  const liste = $("#fwi-liste-" + bi);
+  const zeilen = Object.entries(b.fristen).map(([art, neu]) => {
+    const alt = fa ? (fa.fristen || {})[art] || null : null, neuIso = neu === "unbefristet" ? null : neu;
+    if(alt === neuIso) return "";
+    return `<label class="fwi-zeile"><input type="checkbox" data-b="${bi}" data-art="${esc(art)}">
+      <span><b>${esc(art)}</b><br>${alt ? fwDatum(art, alt) : "–"} → <span class="neu">${neuIso ? fwDatum(art, neuIso) : "kein Ablaufdatum (Frist entfernen)"}</span>
+      ${neuIso && tageBis(neuIso) < 0 ? ' <span class="tag bad">abgelaufen</span>' : ""}</span></label>`;
+  }).join("");
+  liste.innerHTML = zeilen || '<p class="hint" style="margin:0">✓ Keine Abweichungen – alles stimmt überein.</p>';
+}
+function fwiUebernehmen(){
+  const gewaehlt = [...document.querySelectorAll("#fwiErgebnis input[type=checkbox]:checked")];
+  if(!gewaehlt.length) return toast("Bitte die Änderungen anhaken, die übernommen werden sollen");
+  const namen = [...new Set(gewaehlt.map(c => fwiBloecke[+c.dataset.b].fahrer))];
+  if(!confirm(`${gewaehlt.length} Änderung(en) für ${namen.join(", ")} in den Fristenwächter übernehmen?`)) return;
+  const d = fwDaten();
+  const zuordnung = {};
+  gewaehlt.forEach(c => {
+    const bi = +c.dataset.b, b = fwiBloecke[bi];
+    if(!zuordnung[bi]){
+      const wahl = $("#fwi-fa-" + bi).value;
+      let fa = d.fahrer.find(f => f.id === wahl);
+      if(!fa){   // neuen Fahrer anlegen (letztes Wort = Nachname)
+        const teile = b.fahrer.trim().split(/\s+/);
+        fa = { id: "fa" + Date.now() + bi, nachname: teile.pop(), vorname: teile.join(" "), pnr: "", notiz: "", fristen: {} };
+        d.fahrer.push(fa);
+      }
+      zuordnung[bi] = fa;
+    }
+    const fa = zuordnung[bi], neu = b.fristen[c.dataset.art];
+    fa.fristen = fa.fristen || {};
+    if(neu === "unbefristet") delete fa.fristen[c.dataset.art]; else fa.fristen[c.dataset.art] = neu;
+  });
+  fwSpeichernDaten(d);
+  toast(`✓ ${gewaehlt.length} Änderung(en) übernommen`);
+  fwZeigen("fahrer");
+}
+
 /* Android: wöchentliche Benachrichtigung, wenn Fristen fällig werden */
 function syncFwReminder(){
   try{
@@ -2118,12 +2706,32 @@ function openFwFromNotification(){
 
 /* ---------- Führerscheinkontrolle (monatlich) ---------- */
 // nurCE: nur bei Führerscheinklasse CE nötig; nurMitAdr: nur wenn eine ADR-Karte vorhanden ist
+// fristen: Ablaufdaten, die der Fahrer einträgt; fw = passende Frist im Fristenwächter
 const FS_DOKUMENTE = [
-  { id: "fs",  name: "Führerschein" },
-  { id: "bkf", name: "Berufskraftfahrer-Qualifikationsnachweis", nurCE: true },
-  { id: "fk",  name: "Fahrerkarte", nurCE: true },
-  { id: "adr", name: "ADR-Karte", nurMitAdr: true }
+  { id: "fs",  name: "Führerschein", fristen: [
+    { key: "fs", label: "Führerschein gültig bis (Vorderseite, Feld 4b)", fw: "Führerschein (Dokument)", unbefristet: true },
+    { key: "ce", label: "Klasse C/CE gültig bis (Rückseite, Spalte 11)", fw: "Führerschein Klasse C/CE", nurCE: true }]},
+  { id: "bkf", name: "Berufskraftfahrer-Qualifikationsnachweis", nurCE: true, fristen: [
+    { key: "bkf", label: "Gültig bis", fw: "Fahrerqualifizierung (Code 95)" }]},
+  { id: "fk",  name: "Fahrerkarte", nurCE: true, fristen: [
+    { key: "fk", label: "Gültig bis (Feld 4b)", fw: "Fahrerkarte (Tacho)" }]},
+  { id: "adr", name: "ADR-Karte", nurMitAdr: true, fristen: [
+    { key: "adr", label: "Gültig bis", fw: "Gefahrgutschein (ADR)" }]}
 ];
+let fsDaten = {};   // eingetragene Ablaufdaten (ISO-Datum oder "unbefristet")
+const fsFristenAktiv = () => fsDocsAktiv().flatMap(d => d.fristen.filter(f => !f.nurCE || fsKlasse === "CE"));
+function fsDatumStatus(f){
+  const v = fsDaten[f.key], alt = store.get("fsDatenLetzte", {})[f.key];
+  if(!v) return "";
+  const teile = [];
+  if(v !== "unbefristet"){
+    const t = tageBis(v);
+    if(t < 0) teile.push(`<span style="color:var(--bad);font-weight:600">⚠ Abgelaufen – bitte sofort im Büro melden!</span>`);
+    else if(t <= 90) teile.push(`<span style="color:#b07d00;font-weight:600">Läuft in ${t} Tagen ab</span>`);
+  }
+  if(alt && alt !== v) teile.push(`<span style="color:var(--primary)">Geändert (bisher ${alt === "unbefristet" ? "unbefristet" : fmtIso(alt)})</span>`);
+  return teile.join(" · ");
+}
 const SEITEN = [["v", "Vorderseite"], ["r", "Rückseite"]];
 let fsPhotos = {}, fsAdr = null, fsKlasse = null;
 const fsDocsAktiv = () => FS_DOKUMENTE.filter(d => (!d.nurMitAdr || fsAdr) && (!d.nurCE || fsKlasse === "CE"));
@@ -2163,6 +2771,7 @@ function startFs(){
   $("#fs-bestaet").checked = false;
   fsAdr = store.get("fsAdr", null);       // letzte Antworten merken
   fsKlasse = store.get("fsKlasse", null);
+  fsDaten = Object.assign({}, store.get("fsDatenLetzte", {}));   // Ablaufdaten vom letzten Mal vorausfüllen
   renderFsAdr();
   show("s-fs");
 }
@@ -2209,6 +2818,26 @@ function renderFsDocs(){
       slot.appendChild(inp);
       card.querySelector(".slots").appendChild(slot);
     });
+    // Ablaufdaten des Dokuments
+    d.fristen.filter(f => !f.nurCE || fsKlasse === "CE").forEach(f => {
+      const box = document.createElement("div"); box.className = "fs-frist"; box.dataset.key = f.key;
+      const unbef = fsDaten[f.key] === "unbefristet";
+      box.innerHTML = `<label for="fsd-${f.key}">${esc(f.label)}*</label>
+        <input type="date" id="fsd-${f.key}" value="${unbef ? "" : esc(fsDaten[f.key] || "")}"${unbef ? " disabled" : ""}>
+        ${f.unbefristet ? `<div class="check" style="margin-top:6px"><input type="checkbox" id="fsu-${f.key}"${unbef ? " checked" : ""}><label for="fsu-${f.key}">Kein Ablaufdatum (alter Führerschein)</label></div>` : ""}
+        <div class="fs-status hint"></div>`;
+      const inp = box.querySelector("input[type=date]"), st = box.querySelector(".fs-status");
+      const upd = () => { st.innerHTML = fsDatumStatus(f); box.classList.remove("missing"); };
+      inp.oninput = () => { fsDaten[f.key] = inp.value || undefined; if(!inp.value) delete fsDaten[f.key]; upd(); };
+      const u = box.querySelector(`#fsu-${f.key}`);
+      if(u) u.onchange = () => {
+        inp.disabled = u.checked;
+        if(u.checked){ inp.value = ""; fsDaten[f.key] = "unbefristet"; } else delete fsDaten[f.key];
+        upd();
+      };
+      upd();
+      card.appendChild(box);
+    });
     wrap.appendChild(card);
   });
 }
@@ -2226,6 +2855,13 @@ function submitFs(){
     if(miss){ fehlend++; first = first || sl; }
   });
   if(fehlend) err.push(fehlend + " Foto(s) fehlen");
+  let ohneDatum = 0;
+  document.querySelectorAll("#fsDocs .fs-frist").forEach(b => {
+    const miss = !fsDaten[b.dataset.key];
+    b.classList.toggle("missing", miss);
+    if(miss){ ohneDatum++; first = first || b; }
+  });
+  if(ohneDatum) err.push(ohneDatum + " Ablaufdatum/-daten fehlen");
   if(!$("#fs-bestaet").checked) err.push("Bestätigung");
   if(err.length){
     toast("Bitte ergänzen: " + err.join(", "));
@@ -2241,16 +2877,38 @@ function submitFs(){
     docs: docs.map(x => ({ name: x.name, v: fsPhotos[x.id + "-v"], r: fsPhotos[x.id + "-r"] })),
     photos: []
   };
-  r.subject = `Führerscheinkontrolle ${r.monat} – ${fahrer}`;
+  // Ablaufdaten mit Prüfergebnis
+  const alt = store.get("fsDatenLetzte", {});
+  r.fristen = fsFristenAktiv().map(f => {
+    const v = fsDaten[f.key];
+    return { key: f.key, fw: f.fw, label: f.fw, wert: v, alt: alt[f.key] || null,
+      abgelaufen: v !== "unbefristet" && tageBis(v) < 0, bald: v !== "unbefristet" && tageBis(v) >= 0 && tageBis(v) <= 90 };
+  });
+  const fristText = f => f.wert === "unbefristet" ? "unbefristet" : fmtIso(f.wert);
+  const abgelaufen = r.fristen.filter(f => f.abgelaufen);
+  r.subject = `Führerscheinkontrolle ${r.monat} – ${fahrer}` + (abgelaufen.length ? " – ABGELAUFEN" : "");
+  // Datenblock für "Aus Führerscheinkontrolle übernehmen" im Fristenwächter
+  const naechste = monatsEnde(monatKey(new Date(d.getFullYear(), d.getMonth() + 1, 1)));
+  const block = { v: 1, fahrer, datum: ymd(d), klasse: fsKlasse, adr: fsAdr,
+    fristen: Object.assign(Object.fromEntries(r.fristen.map(f => [f.fw, f.wert])), { "Führerscheinkontrolle": naechste }) };
+  const kodiert = btoa(unescape(encodeURIComponent(JSON.stringify(block))));
   r.text = [
     `${s.firma} – Führerscheinkontrolle ${r.monat}`, "",
+    ...(abgelaufen.length ? [`!!! ABGELAUFEN: ${abgelaufen.map(f => f.label).join(", ")} !!!`, ""] : []),
     `Fahrer: ${fahrer}`, `Führerscheinklasse: ${fsKlasse}`, `Zeitpunkt: ${r.zeitText}`, "",
+    "Ablaufdaten:",
+    ...r.fristen.map(f => `- ${f.label}: ${fristText(f)}` + (f.abgelaufen ? "  ⚠ ABGELAUFEN" : f.bald ? "  (läuft bald ab)" : "") +
+      (f.alt && f.alt !== f.wert ? `  [geändert, bisher ${f.alt === "unbefristet" ? "unbefristet" : fmtIso(f.alt)}]` : "")),
+    "",
     "Fotografiert (Vorder- und Rückseite):",
     ...docs.map(x => "- " + x.name),
     `ADR-Karte: ${fsAdr ? "vorhanden" : "nicht vorhanden"}`,
     ...(r.bem ? ["", "Bemerkungen:", r.bem] : []),
-    "", "Fotos: siehe PDF", "Vom Fahrer bestätigt: eigene, gültige Originaldokumente."
+    "", "Fotos: siehe PDF", "Vom Fahrer bestätigt: eigene, gültige Originaldokumente.",
+    "", "----- Datenblock für den Startklar-Fristenwächter (bitte nicht ändern) -----",
+    "SK1:" + kodiert + ":SK1ENDE"
   ].join("\n");
+  store.set("fsDatenLetzte", Object.fromEntries(r.fristen.map(f => [f.key, f.wert])));
   store.set("lastDriver", Object.assign(store.get("lastDriver", {}), { fahrer }));
   store.set("fsAdr", fsAdr);
   store.set("fsKlasse", fsKlasse);
@@ -2271,12 +2929,13 @@ function buildReport(){
   const r = {
     id: Date.now(), mode, modeName: MODES[mode].name,
     fahrer: v("f-fahrer"), kennz: v("f-kennz").toUpperCase(), anh: v("f-anh").toUpperCase(),
-    km: v("f-km"), ort: mode === "mangel" ? v("f-ort") : "", zeit: v("f-zeit"), zeitText: fmtDateTime(v("f-zeit") || new Date()),
+    km: v("f-km"), ort: mode === "mangel" ? v("f-ort") : "", fzTyp: mitFzTyp(mode) ? fzTyp : "",
+    ziel: mode === "abfahrt" && fzTyp === "LKW" ? v("f-ziel") : "", ladung: mode === "abfahrt" && fzTyp === "LKW" ? v("f-ladung") : "", zeit: v("f-zeit"), zeitText: fmtDateTime(v("f-zeit") || new Date()),
     von: v("f-von"), bis: v("f-bis"), vertr: v("f-vertr"), tank: v("f-tank"), adblue: v("f-adblue"), schl: v("f-schl"),
     bem: v("f-bem"), items, maengel: maengel.map(a => a.punkt + ": " + a.note.trim()),
     // Mangelfotos zuerst, mit Prüfpunkt beschriftet; Fotos von zurückgenommenen Mängeln entfallen
     photos: [
-      ...photos.filter(p => p.key !== null && answers[p.key].status === "bad").map(p => ({ data: p.data, text: "Mangel – " + answers[p.key].punkt })),
+      ...photos.filter(p => p.key !== null && answers[p.key] && answers[p.key].status === "bad").map(p => ({ data: p.data, text: "Mangel – " + answers[p.key].punkt })),
       ...photos.filter(p => p.key === null)
     ],
     sig: sig.toDataURL("image/png")
@@ -2291,6 +2950,9 @@ function buildReport(){
   else L.push("!!! FAHRZEUG NICHT VERKEHRSSICHER !!!", "Begründung: " + r.vsGrund, "");
   L.push(`Fahrer: ${r.fahrer}`, `Fahrzeug: ${r.kennz}` + (r.anh ? ` / Anhänger: ${r.anh}` : ""), `km-Stand: ${r.km}`, `Zeitpunkt: ${r.zeitText}`);
   if(r.ort) L.push(`Standort: ${r.ort}`);
+  if(r.fzTyp) L.push(`Fahrzeugart: ${r.fzTyp}` + (r.anh ? " mit Anhänger" : ""));
+  if(r.ziel) L.push(`Abfahrtsort / Ziel: ${r.ziel}`);
+  if(r.ladung) L.push(`Ladung / Gewicht: ${r.ladung}`);
   if(mode === "uebergabe" || mode === "uebernahme"){
     if(r.von || r.bis) L.push(`Abwesenheit: ${fmtDate(r.von) || "?"} – ${fmtDate(r.bis) || "?"}`);
     if(r.vertr) L.push(`${MODES[mode].vertr}: ${r.vertr}`);
@@ -2343,6 +3005,20 @@ function buildFsPdf(r){
   [["Fahrer", r.fahrer], ["Klasse", r.klasse], ["Zeitpunkt", r.zeitText], ["ADR-Karte", r.adr ? "vorhanden" : "nicht vorhanden"]].forEach(([k, v]) => {
     doc.setFont("helvetica","bold"); doc.text(k + ":", M, y); doc.setFont("helvetica","normal"); doc.text(String(v), M + 30, y); y += 6;
   });
+  // Ablaufdaten mit Prüfergebnis
+  if(r.fristen && r.fristen.length){
+    y += 2; doc.setFont("helvetica","bold"); doc.text("Ablaufdaten", M, y); y += 6; doc.setFont("helvetica","normal"); doc.setFontSize(10);
+    r.fristen.forEach(f => {
+      doc.text(f.label + ":", M, y);
+      if(f.abgelaufen) doc.setTextColor(198,40,40); else if(f.bald) doc.setTextColor(176,125,0);
+      doc.setFont("helvetica","bold");
+      doc.text((f.wert === "unbefristet" ? "unbefristet" : fmtIso(f.wert)) + (f.abgelaufen ? "  ABGELAUFEN" : f.bald ? "  läuft bald ab" : ""), M + 70, y);
+      doc.setFont("helvetica","normal"); doc.setTextColor(0);
+      if(f.alt && f.alt !== f.wert){ doc.setTextColor(31,78,121); doc.text("geändert", M + 140, y); doc.setTextColor(0); }
+      y += 5.5;
+    });
+    doc.setFontSize(11); y += 2;
+  }
   if(r.bem){ const b = doc.splitTextToSize("Bemerkungen: " + r.bem, W - 2*M); doc.text(b, M, y); y += b.length * 5; }
   doc.setFontSize(8); doc.setTextColor(90);
   doc.text("Vom Fahrer bestätigt: Die fotografierten Dokumente sind eigene, gültige Originale.", M, y + 2); doc.setTextColor(0);
@@ -2382,6 +3058,9 @@ function buildPdf(r){
   doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(90); doc.text(s.firma, M, y); doc.setTextColor(0); y += 8;
   const info = [["Fahrer", r.fahrer], ["Fahrzeug", r.kennz + (r.anh ? " / Anhänger " + r.anh : "")], ["km-Stand", r.km], ["Zeitpunkt", r.zeitText]];
   if(r.ort) info.push(["Standort", r.ort]);
+  if(r.fzTyp) info.push(["Fahrzeugart", r.fzTyp + (r.anh ? " mit Anhänger" : "")]);
+  if(r.ziel) info.push(["Ort / Ziel", r.ziel]);
+  if(r.ladung) info.push(["Ladung", r.ladung]);
   if(r.mode === "uebergabe" || r.mode === "uebernahme"){
     if(r.von || r.bis) info.push(["Abwesenheit", (fmtDate(r.von) || "?") + " – " + (fmtDate(r.bis) || "?")]);
     if(r.vertr) info.push([r.mode === "uebergabe" ? "Übergeben an" : "Übernommen von", r.vertr]);
